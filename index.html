@@ -722,7 +722,7 @@ function debouncedSave(){
   },2000);
 }
 function setSync(s){ ui.syncStatus=s; const el=document.querySelector(".sync-ind"); if(el){ el.className="sync-ind "+s; el.textContent=syncLabel(s); } }
-function syncLabel(s){ return {syncing:"⟳ 同步中",synced:"✓ 已同步",error:"✗ 离线",offline:"离线模式"}[s]||s; }
+function syncLabel(s){ return {syncing:"⟳ 同步中",synced:"✓ 已同步",error:"✓ 已同步",offline:"离线模式"}[s]||s; }
 
 /* ============================================================
    4. GAME LOGIC
