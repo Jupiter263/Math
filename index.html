@@ -722,7 +722,7 @@ function debouncedSave(){
   },2000);
 }
 function setSync(s){ ui.syncStatus=s; const el=document.querySelector(".sync-ind"); if(el){ el.className="sync-ind "+s; el.textContent=syncLabel(s); } }
-function syncLabel(s){ return {syncing:"⟳ 同步中",synced:"✓ 已同步",error:"✗ 同步失败",offline:"离线模式"}[s]||s; }
+function syncLabel(s){ return {syncing:"⟳ 同步中",synced:"✓ 已同步",error:"✗ 离线",offline:"离线模式"}[s]||s; }
 
 /* ============================================================
    4. GAME LOGIC
@@ -983,7 +983,7 @@ function renderSideQuest(){
   const unlocked=state.todayCompleted.length>=1;
   let inner;
   if(!unlocked){
-    inner=`<div class="side-locked">⭐ 支线星图<br><br>今日完成至少一个数学房间后<br>解锁支线学习节点</div>`;
+    inner=`<div class="side-locked">⭐ 星蕴<br><br>今日完成至少一个数学房间后<br>解锁支线学习节点</div>`;
   } else {
     inner=`<div class="node-grid">`;
     SIDE_NODES.forEach(n=>{
@@ -1048,13 +1048,13 @@ function renderQuizModal(){
     let philPanel = q.passed&&q.completionPhil ? renderQuotePanel([q.completionPhil],true) : "";
     let msg;
     if(q.passed){ msg=`通关成功！<br>答对 ${q.correct}/${q.questions.length} 题 · +${q.room.boss?30:10} XP`; }
-    else if(q.room.boss){ msg=`BOSS 战失败！<br>答对 ${q.correct}/${q.questions.length}（需 ${q.need}）<br><span style="font-size:0.9rem;color:var(--text-dim)">该房间已重置为未解锁，整顿后再战。</span>`; }
-    else { msg=`闯关失败<br>答对 ${q.correct}/${q.questions.length}（需 ${q.need}）<br><span style="font-size:0.9rem;color:var(--text-dim)">再接再厉，重新挑战。</span>`; }
+    else if(q.room.boss){ msg=`BOSS 战败北！<br>答对 ${q.correct}/${q.questions.length}（需 ${q.need}）<br><span style="font-size:0.9rem;color:var(--text-dim)">该房间已重置为未解锁，整顿后再战。</span>`; }
+    else { msg=`败北<br>答对 ${q.correct}/${q.questions.length}（需 ${q.need}）<br><span style="font-size:0.9rem;color:var(--text-dim)">再接再厉，重新挑战。</span>`; }
     body=`<div class="quiz-result ${cls}">
       <div class="big en">${q.passed?'VICTORY':'DEFEAT'}</div>
       <div style="line-height:1.8;margin-bottom:16px">${msg}</div>
     </div>${philPanel}
-    <div style="text-align:center"><button class="btn" id="quizCloseBtn">${q.passed?'凯旋而归':'返回地图'}</button></div>`;
+    <div style="text-align:center"><button class="btn" id="quizCloseBtn">${q.passed?'凯旋':'返回地图'}</button></div>`;
   } else {
     const cur=q.questions[q.idx];
     let entryPanel = q.idx===0 ? renderQuotePanel(q.phils,false) : "";
