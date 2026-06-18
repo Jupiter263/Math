@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>木星数学史诗 · Jupiter Math RPG</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600;700&family=IM+Fell+English+SC:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f0800; --primary:#c8922a; --secondary:#8b1a1a; --paper:#f0e6c8;
+  --text:#f0e6c8; --text-dim:rgba(240,230,200,0.55); --border:rgba(200,146,42,0.35);
+  --glow:rgba(200,146,42,0.5);
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:"Noto Serif SC",serif;
+  transition:background 0.8s ease, color 0.8s ease;
+  overflow-x:hidden; min-height:100vh;
+}
+h1,h2,h3,.en{font-family:"IM Fell English SC",serif;}
+#ink-canvas{position:fixed; inset:0; z-index:9999; pointer-events:none; display:none;}
+#app{max-width:1280px; margin:0 auto; padding:16px; position:relative; z-index:1;}
+
+/* Onboarding */
+.onboard{min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px 20px;}
+.onboard h1{font-size:3rem; color:var(--primary); letter-spacing:4px; margin-bottom:8px; text-shadow:0 0 20px var(--glow);}
+.onboard .sub{font-size:1.2rem; color:var(--secondary); margin-bottom:30px; letter-spacing:2px;}
+.onboard .note{max-width:520px; color:var(--text-dim); line-height:1.8; margin-bottom:24px; font-size:0.95rem;}
+.onboard input{width:100%; max-width:480px; padding:14px; background:rgba(0,0,0,0.3); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:1rem; margin-bottom:16px; font-family:monospace;}
+.onboard input:focus{outline:none; border-color:var(--primary); box-shadow:0 0 12px var(--glow);}
+.btn{background:linear-gradient(135deg,var(--primary),var(--secondary)); color:var(--bg); border:none; padding:14px 36px; font-size:1.05rem; border-radius:6px; cursor:pointer; font-family:"Noto Serif SC",serif; font-weight:600; letter-spacing:2px; transition:transform 0.15s, box-shadow 0.15s;}
+.btn:hover{transform:translateY(-2px); box-shadow:0 4px 20px var(--glow);}
+.btn-ghost{background:transparent; border:1px solid var(--border); color:var(--text-dim); margin-top:14px; padding:10px 28px;}
+.btn-ghost:hover{box-shadow:none; color:var(--text);}
+.btn:disabled{opacity:0.5; cursor:not-allowed; transform:none;}
+
+/* Header */
+.header{display:flex; align-items:center; flex-wrap:wrap; gap:14px; padding:14px 18px; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:10px; margin-bottom:14px;}
+.header .era-name{font-size:1.4rem; color:var(--primary); font-weight:700; letter-spacing:2px;}
+.header .era-en{font-size:0.8rem; color:var(--text-dim); letter-spacing:1px;}
+.stat{padding:6px 12px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:20px; font-size:0.9rem; white-space:nowrap;}
+.stat b{color:var(--primary);}
+.header .spacer{flex:1;}
+.sync-ind{font-size:0.78rem; padding:5px 12px; border-radius:14px; border:1px solid var(--border);}
+.sync-ind.syncing{color:#e0b040;} .sync-ind.synced{color:#7a9e3b;} .sync-ind.error{color:#c84030;} .sync-ind.offline{color:var(--text-dim);}
+.progress-wrap{width:100%; height:8px; background:rgba(0,0,0,0.4); border-radius:5px; margin-top:4px; overflow:hidden; border:1px solid var(--border);}
+.progress-bar{height:100%; background:linear-gradient(90deg,var(--secondary),var(--primary)); transition:width 0.6s ease; box-shadow:0 0 10px var(--glow);}
+
+/* Main layout */
+.main-grid{display:flex; gap:16px; align-items:flex-start;}
+.map-col{flex:0 0 60%; max-width:60%;}
+.side-col{flex:1; min-width:0;}
+@media(max-width:860px){.main-grid{flex-direction:column;} .map-col,.side-col{flex:1 1 100%; max-width:100%; width:100%;}}
+
+.continent-tabs{display:flex; gap:8px; margin-bottom:12px;}
+.continent-tabs button{flex:1; padding:10px; background:rgba(0,0,0,0.25); border:1px solid var(--border); color:var(--text-dim); border-radius:8px; cursor:pointer; font-family:inherit; font-size:0.92rem; transition:all 0.2s;}
+.continent-tabs button.active{background:rgba(0,0,0,0.45); color:var(--primary); border-color:var(--primary); box-shadow:0 0 10px var(--glow);}
+
+.room-list{display:flex; flex-direction:column; gap:10px;}
+.room-card{position:relative; padding:14px 16px; border-radius:10px; border:1px solid var(--border); background:rgba(0,0,0,0.22); cursor:pointer; transition:transform 0.15s; display:flex; align-items:center; gap:12px;}
+.room-card .rname{font-size:1.08rem; font-weight:600;}
+.room-card .ren{font-size:0.75rem; color:var(--text-dim);}
+.room-card .rsec{font-size:0.75rem; color:var(--text-dim); margin-top:2px;}
+.room-card .rbadge{margin-left:auto; font-size:0.8rem; padding:4px 10px; border-radius:12px;}
+.room-card.locked{opacity:0.45; cursor:not-allowed;}
+.room-card.available{animation:pulse-glow 2.2s infinite;}
+.room-card.available:hover{transform:translateX(4px);}
+.room-card.completed{border-color:#7a9e3b; background:rgba(40,60,20,0.25);}
+.room-card.completed .rbadge{color:#7a9e3b; border:1px solid #7a9e3b;}
+.room-card.reset{border-color:#c84030; background:rgba(60,20,20,0.25); animation:pulse-glow 1.6s infinite;}
+.room-card.reset .rbadge{color:#c84030; border:1px solid #c84030;}
+.room-card.boss .rname::before{content:"⚔ "; color:var(--secondary);}
+.icon{font-size:1.3rem; width:30px; text-align:center;}
+@keyframes pulse-glow{0%,100%{box-shadow:0 0 8px var(--primary);} 50%{box-shadow:0 0 20px var(--primary),0 0 40px var(--glow);}}
+
+/* Side quest */
+.side-panel{padding:14px; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:10px;}
+.side-panel h3{color:var(--primary); margin-bottom:4px; letter-spacing:2px;}
+.side-panel .side-en{font-size:0.75rem; color:var(--text-dim); margin-bottom:12px;}
+.side-locked{color:var(--text-dim); text-align:center; padding:24px 0; font-size:0.9rem; line-height:1.7;}
+.node-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+@media(max-width:520px){.node-grid{grid-template-columns:repeat(3,1fr);}}
+.node{position:relative; padding:8px 6px; border-radius:8px; border:1px solid var(--border); background:rgba(0,0,0,0.2); cursor:pointer; text-align:center; transition:all 0.18s; min-height:64px; display:flex; flex-direction:column; justify-content:center;}
+.node:hover{transform:scale(1.04); box-shadow:0 0 12px var(--glow);}
+.node .nname{font-size:0.82rem; line-height:1.2;}
+.node .nvisits{font-size:0.68rem; color:var(--text-dim); margin-top:3px;}
+.node.required{border-color:var(--primary); box-shadow:inset 0 0 0 1px var(--glow);}
+.node.visited{background:rgba(0,0,0,0.4);}
+.node .ncat{position:absolute; top:4px; right:4px; width:8px; height:8px; border-radius:50%;}
+.cat-cs{background:#3a9abf;} .cat-sci{background:#7a9e3b;} .cat-hum{background:#8b8fd4;}
+.cat-lang{background:#c8a840;} .cat-soc{background:#c84030;} .cat-art{background:#d48fc8;}
+.cat-legend{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; font-size:0.7rem; color:var(--text-dim);}
+.cat-legend span{display:flex; align-items:center; gap:4px;}
+.cat-legend i{width:8px; height:8px; border-radius:50%; display:inline-block;}
+
+/* Status bar */
+.status-bar{margin-top:14px; padding:12px 18px; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:10px; display:flex; flex-wrap:wrap; gap:18px; font-size:0.92rem;}
+.status-bar b{color:var(--primary);}
+
+/* Modal */
+.modal-overlay{position:fixed; inset:0; background:rgba(0,0,0,0.78); z-index:1000; display:flex; align-items:flex-start; justify-content:center; padding:18px; backdrop-filter:blur(3px); overflow-y:auto;}
+.modal{background:var(--bg); border:1px solid var(--primary); border-radius:14px; max-width:680px; width:100%; margin:auto; overflow:visible; box-shadow:0 0 50px var(--glow);}
+.modal-head{padding:18px 22px; border-bottom:1px solid var(--border); display:flex; align-items:center;}
+.modal-head h2{color:var(--primary); letter-spacing:2px; font-size:1.5rem;}
+.modal-head .mh-en{font-size:0.8rem; color:var(--text-dim);}
+.modal-head .close{margin-left:auto; background:none; border:1px solid var(--border); color:var(--text); width:34px; height:34px; border-radius:50%; cursor:pointer; font-size:1.1rem;}
+.modal-body{padding:20px 22px;}
+
+/* Quote panel */
+.quote-panel{margin-bottom:18px;}
+.quote-card{padding:12px 14px; border-left:3px solid var(--secondary); background:rgba(0,0,0,0.25); margin-bottom:10px; border-radius:0 8px 8px 0;}
+.quote-card .qname{color:var(--primary); font-weight:600;}
+.quote-card .qera{font-size:0.72rem; color:var(--text-dim); margin-left:8px;}
+.quote-card .qphil{font-style:italic; margin:6px 0; line-height:1.7;}
+.quote-card .qmath{font-size:0.88rem; color:var(--secondary); line-height:1.6;}
+
+/* Quiz */
+.quiz-progress{font-size:0.9rem; color:var(--text-dim); margin-bottom:12px; text-align:center;}
+.quiz-q{font-size:1.25rem; line-height:1.7; margin-bottom:20px; padding:14px; background:rgba(0,0,0,0.2); border-radius:8px;}
+.opt-btn{display:block; width:100%; text-align:left; padding:13px 16px; margin-bottom:10px; background:rgba(0,0,0,0.25); border:1px solid var(--border); color:var(--text); border-radius:8px; cursor:pointer; font-family:inherit; font-size:1rem; transition:all 0.15s;}
+.opt-btn:hover{border-color:var(--primary); box-shadow:0 0 8px var(--glow);}
+.opt-btn.selected{border-color:var(--primary); background:rgba(200,146,42,0.18);}
+.opt-btn.correct{border-color:#7a9e3b; background:rgba(122,158,59,0.22);}
+.opt-btn.wrong{border-color:#c84030; background:rgba(200,64,48,0.22);}
+.opt-btn:disabled{cursor:default;}
+.num-input{width:100%; padding:13px 16px; background:rgba(0,0,0,0.3); border:1px solid var(--border); color:var(--text); border-radius:8px; font-size:1.1rem; margin-bottom:12px; font-family:monospace;}
+.num-input:focus{outline:none; border-color:var(--primary); box-shadow:0 0 10px var(--glow);}
+.feedback{padding:14px 16px; border-radius:8px; margin-top:14px; line-height:1.7;}
+.feedback.ok{background:rgba(122,158,59,0.18); border:1px solid #7a9e3b;}
+.feedback.no{background:rgba(200,64,48,0.18); border:1px solid #c84030;}
+.feedback .fhead{font-weight:600; margin-bottom:6px; font-size:1.05rem;}
+.feedback.ok .fhead{color:#9bc05b;} .feedback.no .fhead{color:#e06050;}
+.feedback .fexp{font-size:0.92rem; color:var(--text-dim);}
+.quiz-result{text-align:center; padding:16px;}
+.quiz-result .big{font-size:2.2rem; color:var(--primary); margin-bottom:10px; letter-spacing:3px;}
+.quiz-result.fail .big{color:#c84030;}
+
+/* Era log */
+.era-log-list{display:flex; flex-direction:column; gap:14px;}
+.era-entry{padding:14px; border:1px solid var(--border); border-radius:10px; background:rgba(0,0,0,0.2);}
+.era-entry.current{border-color:var(--primary); box-shadow:0 0 14px var(--glow);}
+.era-entry .ee-head{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+.era-entry .swatch{width:20px; height:20px; border-radius:50%; border:1px solid rgba(255,255,255,0.3);}
+.era-entry .ee-name{font-weight:600; color:var(--primary); font-size:1.1rem;}
+.era-entry .ee-en{font-size:0.72rem; color:var(--text-dim);}
+.phil-list{display:flex; flex-direction:column; gap:6px; margin-top:6px;}
+.phil-item{font-size:0.88rem; line-height:1.6;}
+.phil-item b{color:var(--secondary);}
+.phil-item .pe{color:var(--text-dim); font-size:0.78rem; margin-left:6px;}
+
+/* node modal */
+.node-modal textarea{width:100%; min-height:140px; padding:12px; background:rgba(0,0,0,0.3); border:1px solid var(--border); color:var(--text); border-radius:8px; font-family:inherit; font-size:0.95rem; line-height:1.6; resize:vertical;}
+.node-modal textarea:focus{outline:none; border-color:var(--primary);}
+.modal-foot{padding:16px 22px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end;}
+.toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--primary); color:var(--bg); padding:12px 24px; border-radius:24px; z-index:2000; font-weight:600; box-shadow:0 4px 20px var(--glow); animation:toastin 0.3s;}
+@keyframes toastin{from{opacity:0; transform:translateX(-50%) translateY(10px);} to{opacity:1;}}
+.utility-row{display:flex; gap:8px; flex-wrap:wrap; margin-top:14px;}
+.utility-row button{font-size:0.8rem; padding:8px 14px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<canvas id="ink-canvas"></canvas>
+<script>
+"use strict";
+/* ============================================================
+   1. DATA CONSTANTS
+   ============================================================ */
+const ERA_THEMES = [
+  {name:"先秦·古希腊",nameEn:"Pre-Qin & Ancient Greece",bg:"#0f0800",primary:"#c8922a",secondary:"#8b1a1a",paper:"#f0e6c8",text:"#f0e6c8",
+   characters:["孔子","孟子","荀子","墨子","庄子","韩非子","苏格拉底","柏拉图","亚里士多德"]},
+  {name:"两汉·斯多葛",nameEn:"Han & Stoicism",bg:"#040d04",primary:"#7a9e3b",secondary:"#d4af37",paper:"#e8dcc8",text:"#e8dcc8",
+   characters:["董仲舒","司马迁","班固","郑玄","王充","西塞罗","塞涅卡","马可·奥勒留"]},
+  {name:"魏晋·新柏拉图",nameEn:"Wei-Jin & Neoplatonism",bg:"#050510",primary:"#8b8fd4",secondary:"#c0a882",paper:"#e8e0d0",text:"#e8e0d0",
+   characters:["王弼","郭象","嵇康","阮籍","普罗提诺","奥古斯丁"]},
+  {name:"宋明·经院",nameEn:"Song-Ming & Scholasticism",bg:"#060810",primary:"#3a9abf",secondary:"#c8a870",paper:"#e0d8c8",text:"#e0d8c8",
+   characters:["程颐","程颢","朱熹","陆九渊","王阳明","王艮","阿奎那","奥卡姆的威廉"]},
+  {name:"经世·启蒙",nameEn:"Statecraft & Enlightenment",bg:"#0d0a04",primary:"#c8960a",secondary:"#2d5a3d",paper:"#f0e0b0",text:"#f0e0b0",
+   characters:["顾炎武","黄宗羲","王夫之","戴震","培根","洛克","休谟","康德","卢梭"]},
+  {name:"晚清·19世纪",nameEn:"Late Qing & 19th Century",bg:"#0d0406",primary:"#c84030",secondary:"#c8a840",paper:"#e8d8c0",text:"#e8d8c0",
+   characters:["龚自珍","魏源","康有为","梁启超","严复","谭嗣同","黑格尔","马克思","穆勒","尼采"]},
+  {name:"五四·现代",nameEn:"May Fourth & Modern",bg:"#060606",primary:"#d41418",secondary:"#888888",paper:"#f0f0e8",text:"#f0f0e8",
+   characters:["陈独秀","胡适","鲁迅","梁漱溟","冯友兰","金岳霖","维特根斯坦","海德格尔","罗素"]},
+  {name:"当代·批判",nameEn:"Contemporary & Critical",bg:"#040408",primary:"#00c8f0",secondary:"#f04040",paper:"#e0e0e8",text:"#e0e0e8",
+   characters:["牟宗三","李泽厚","汪晖","葛兆光","福柯","哈贝马斯","罗尔斯","查尔斯·泰勒"]}
+];
+
+const ROOMS = [
+ // Continent 0: 微积分大陆
+ {id:0,name:"极限之门",nameEn:"Gateway of Limits",continent:0,boss:false,section:"§1.3–1.4",questions:[
+   {type:"choice",q:"求极限 lim(x→2) (x²−4)/(x−2) 的值：",opts:["2","4","0","不存在"],ans:1,exp:"因式分解：(x²−4)/(x−2)=(x+2)，代入x=2得4。"},
+   {type:"numeric",q:"求极限 lim(x→3) (x²−9)/(x−3) = ？",ans:6,tol:0.01,exp:"(x²−9)/(x−3)=(x+3)，代入x=3得6。"},
+   {type:"choice",q:"lim(x→0) sin(x)/x 等于：",opts:["0","1","∞","不存在"],ans:1,exp:"标准极限，结果为1，可用夹逼定理证明。"},
+   {type:"choice",q:"极限 lim(x→a) f(x) = L 的含义是：",opts:["f(a)=L","f在a处有定义","x趋近a时f(x)趋近L","f在a处连续"],ans:2,exp:"极限描述趋近行为，不要求f在a处有定义。"},
+   {type:"numeric",q:"求极限 lim(x→1) (x³−1)/(x−1) = ？",ans:3,tol:0.01,exp:"(x³−1)/(x−1)=x²+x+1，代入x=1得3。"},
+   {type:"choice",q:"函数 f(x)=1/x 在 x=0 处：",opts:["极限为0","极限为1","极限不存在","极限为∞"],ans:2,exp:"左极限−∞，右极限+∞，不相等，故极限不存在。"}
+ ]},
+ {id:1,name:"无穷极限",nameEn:"Infinite Limits",continent:0,boss:false,section:"§1.5–1.6",questions:[
+   {type:"choice",q:"求 lim(x→∞) (3x²+2)/(x²+1)：",opts:["0","2","3","∞"],ans:2,exp:"分子分母同除x²得3/1=3。"},
+   {type:"numeric",q:"求 lim(x→∞) (5x³+2x)/(2x³−1) = ？",ans:2.5,tol:0.01,exp:"最高次系数比5/2=2.5。"},
+   {type:"choice",q:"lim(x→0⁺) 1/x 等于：",opts:["-∞","0","1","+∞"],ans:3,exp:"从右侧趋近0，1/x趋向正无穷。"},
+   {type:"choice",q:"水平渐近线 y=L 存在的条件是：",opts:["lim(x→a)f(x)=L","lim(x→∞)f(x)=L","f(L)=0","f'(L)=0"],ans:1,exp:"x趋向±∞时函数值趋向L。"},
+   {type:"numeric",q:"求 lim(x→∞) e^(−x) = ？",ans:0,tol:0.001,exp:"指数负幂趋向0。"},
+   {type:"choice",q:"lim(x→∞) (2x+1)/(x−3) = ？",opts:["1","2","3","∞"],ans:1,exp:"最高次系数比2/1=2。"}
+ ]},
+ {id:2,name:"导数定义",nameEn:"Derivative Definition",continent:0,boss:false,section:"§2.2–2.3",questions:[
+   {type:"choice",q:"设 f(x)=x²，用导数定义求 f'(3)：",opts:["3","6","9","12"],ans:1,exp:"f'(x)=2x，f'(3)=6。"},
+   {type:"numeric",q:"设 f(x)=x³，则 f'(2) = ？",ans:12,tol:0.01,exp:"f'(x)=3x²，f'(2)=12。"},
+   {type:"choice",q:"导数的几何意义是：",opts:["曲线下面积","瞬时变化率","平均值","切线纵截距"],ans:1,exp:"导数=切线斜率=瞬时变化率。"},
+   {type:"numeric",q:"设 f(x)=5x，则 f'(x) = ？",ans:5,tol:0.01,exp:"线性函数导数为斜率5。"},
+   {type:"choice",q:"函数 f(x)=|x| 在何处不可微：",opts:["x=1","x=−1","x=0","处处可微"],ans:2,exp:"x=0处左右导数不等。"},
+   {type:"numeric",q:"用定义求 f(x)=x²+1 在 x=2 处的导数：",ans:4,tol:0.01,exp:"f'(x)=2x，f'(2)=4。"}
+ ]},
+ {id:3,name:"求导工具箱",nameEn:"Derivative Toolkit",continent:0,boss:false,section:"§2.4–2.6",questions:[
+   {type:"numeric",q:"求 d/dx[x⁵] 在 x=1 处的值：",ans:5,tol:0.01,exp:"5x⁴在x=1处=5。"},
+   {type:"choice",q:"乘积法则 (fg)' = ？",opts:["f'g'","f'g+fg'","f'g−fg'","f/g'"],ans:1,exp:"(fg)'=f'g+fg'。"},
+   {type:"numeric",q:"d/dx[x³+2x] 在 x=2 处 = ？",ans:14,tol:0.01,exp:"3x²+2在x=2处=14。"},
+   {type:"choice",q:"d/dx[sin(x)] = ？",opts:["−cos(x)","cos(x)","−sin(x)","tan(x)"],ans:1,exp:"sin的导数是cos。"},
+   {type:"numeric",q:"d/dx[3x⁴] 在 x=1 处 = ？",ans:12,tol:0.01,exp:"12x³在x=1处=12。"},
+   {type:"choice",q:"商法则 (f/g)' = ？",opts:["(f'g−fg')/g²","(f'g+fg')/g²","f'/g'","(fg'−f'g)/g²"],ans:0,exp:"(f/g)'=(f'g−fg')/g²。"}
+ ]},
+ {id:4,name:"指数与对数",nameEn:"Exp & Logarithms",continent:0,boss:false,section:"§2.7,2.10",questions:[
+   {type:"choice",q:"d/dx[eˣ] = ？",opts:["xeˣ⁻¹","eˣ","eˣ⁻¹","ln(x)·eˣ"],ans:1,exp:"eˣ的导数仍是eˣ。"},
+   {type:"numeric",q:"d/dx[ln(x)] 在 x=1 处 = ？",ans:1,tol:0.01,exp:"1/x在x=1处=1。"},
+   {type:"choice",q:"d/dx[aˣ]（a>0,a≠1）= ？",opts:["xaˣ⁻¹","aˣ·ln(a)","aˣ","x·ln(a)"],ans:1,exp:"aˣ=eˣln(a)，导数aˣ·ln(a)。"},
+   {type:"numeric",q:"d/dx[e^(2x)] 在 x=0 处 = ？",ans:2,tol:0.01,exp:"2e^(2x)在x=0处=2。"},
+   {type:"choice",q:"d/dx[ln(3x)] = ？",opts:["3/x","1/x","3·ln(3x)","ln(3)/x"],ans:1,exp:"ln(3x)=ln3+lnx，导数1/x。"},
+   {type:"numeric",q:"d/dx[x·ln(x)] 在 x=e 处 = ？",ans:2,tol:0.01,exp:"ln(x)+1在x=e处=1+1=2。"}
+ ]},
+ {id:5,name:"链式法则",nameEn:"Chain Rule",continent:0,boss:true,section:"§2.9",questions:[
+   {type:"choice",q:"链式法则 d/dx[f(g(x))] = ？",opts:["f'(g(x))","f'(x)g'(x)","f'(g(x))·g'(x)","f(g'(x))"],ans:2,exp:"链式法则：外导×内导。"},
+   {type:"numeric",q:"d/dx[(2x+1)³] 在 x=0 处 = ？",ans:6,tol:0.01,exp:"3(2x+1)²·2，x=0时=3·1·2=6。"},
+   {type:"numeric",q:"d/dx[sin(2x)] 在 x=0 处 = ？",ans:2,tol:0.01,exp:"2cos(2x)在x=0处=2。"},
+   {type:"choice",q:"d/dx[e^(x²)] = ？",opts:["e^(x²)","2x·e^(x²)","x²e^(x²)","2e^(x²)"],ans:1,exp:"外导e^(x²)×内导2x。"},
+   {type:"numeric",q:"d/dx[(x²+1)⁵] 在 x=1 处 = ？",ans:160,tol:0.1,exp:"5(x²+1)⁴·2x，x=1时：x²+1=2，2⁴=16，5×16×2=160。"},
+   {type:"numeric",q:"d/dx[ln(x²+1)] 在 x=1 处 = ？",ans:1,tol:0.01,exp:"2x/(x²+1)，x=1时=2/2=1。"},
+   {type:"choice",q:"d/dx[cos(3x)] = ？",opts:["−3sin(3x)","3sin(3x)","−sin(3x)","3cos(3x)"],ans:0,exp:"−sin(3x)·3=−3sin(3x)。"}
+ ]},
+ {id:6,name:"隐函数求导",nameEn:"Implicit Differentiation",continent:0,boss:false,section:"§2.11",questions:[
+   {type:"choice",q:"对 x²+y²=1 隐式求导，dy/dx = ？",opts:["−x/y","x/y","−y/x","y/x"],ans:0,exp:"2x+2y·y'=0 ⟹ y'=−x/y。"},
+   {type:"numeric",q:"x²+y²=25 在点(3,4)处 dy/dx = ？",ans:-0.75,tol:0.01,exp:"y'=−x/y=−3/4=−0.75。"},
+   {type:"choice",q:"隐函数求导的关键是把 y 看作：",opts:["常数","x的函数","参数","无关变量"],ans:1,exp:"y是x的函数，对y的项需乘y'。"},
+   {type:"numeric",q:"xy=6 在点(2,3)处 dy/dx = ？",ans:-1.5,tol:0.01,exp:"y+xy'=0 ⟹ y'=−y/x=−3/2=−1.5。"},
+   {type:"choice",q:"对 y³=x 求导得 3y²y'=1，则 y' = ？",opts:["3y²","1/(3y²)","y²/3","3/y²"],ans:1,exp:"y'=1/(3y²)。"},
+   {type:"numeric",q:"x²−y²=0 在点(2,2)处 dy/dx = ？",ans:1,tol:0.01,exp:"2x−2y·y'=0 ⟹ y'=x/y=1。"}
+ ]},
+ {id:7,name:"Taylor近似塔",nameEn:"Taylor Tower",continent:0,boss:false,section:"§3.4.1–3.4.3",questions:[
+   {type:"choice",q:"f(x)在a处的一阶Taylor近似为：",opts:["f(a)","f(a)+f'(a)(x−a)","f'(a)(x−a)","f(a)(x−a)"],ans:1,exp:"线性近似=f(a)+f'(a)(x−a)。"},
+   {type:"numeric",q:"用线性近似估计 √4.04（在a=4处，f=√x）：",ans:2.01,tol:0.005,exp:"√4+(1/(2·2))(0.04)=2+0.01=2.01。"},
+   {type:"choice",q:"eˣ 在 x=0 处的二阶Taylor展开：",opts:["1+x","1+x+x²","1+x+x²/2","x+x²/2"],ans:2,exp:"eˣ≈1+x+x²/2。"},
+   {type:"numeric",q:"sin(x)在x=0处的三阶Taylor系数(x³项)为？(填分母,即1/n!)",ans:6,tol:0.01,exp:"x³系数为−1/3!=−1/6，分母6。"},
+   {type:"choice",q:"Taylor余项反映：",opts:["近似误差","导数值","积分值","极限值"],ans:0,exp:"余项即近似与真值之差。"},
+   {type:"numeric",q:"用一阶近似估计 (1.02)^10（f=x^10在x=1）：",ans:1.2,tol:0.01,exp:"1+10·0.02=1.2。"}
+ ]},
+ {id:8,name:"优化决战",nameEn:"Optimization Battle",continent:0,boss:true,section:"§3.5",questions:[
+   {type:"choice",q:"求极值的第一步是令：",opts:["f(x)=0","f'(x)=0","f''(x)=0","f(x)=1"],ans:1,exp:"临界点处f'(x)=0。"},
+   {type:"numeric",q:"f(x)=x²−4x+3 的最小值在 x = ？",ans:2,tol:0.01,exp:"f'=2x−4=0 ⟹ x=2。"},
+   {type:"numeric",q:"f(x)=x²−4x+3 的最小值为 ？",ans:-1,tol:0.01,exp:"f(2)=4−8+3=−1。"},
+   {type:"choice",q:"二阶导数判别法：f''(x₀)>0 表示：",opts:["极大值","极小值","拐点","无结论"],ans:1,exp:"f''>0为下凸，是极小值。"},
+   {type:"numeric",q:"f(x)=−x²+6x 的最大值为 ？",ans:9,tol:0.01,exp:"f'=−2x+6=0,x=3,f(3)=−9+18=9。"},
+   {type:"choice",q:"周长固定的矩形面积最大时形状为：",opts:["正方形","细长矩形","任意","三角形"],ans:0,exp:"等周问题中正方形面积最大。"},
+   {type:"numeric",q:"f(x)=x³−3x 的极小值在 x = ？",ans:1,tol:0.01,exp:"f'=3x²−3=0,x=±1,x=1为极小。"}
+ ]},
+ {id:9,name:"定积分深渊",nameEn:"Definite Integral Abyss",continent:0,boss:false,section:"§1.1–1.3(CLP2)",questions:[
+   {type:"numeric",q:"∫₀² 2x dx = ？",ans:4,tol:0.01,exp:"x²|₀²=4。"},
+   {type:"numeric",q:"∫₀¹ x² dx = ？",ans:0.3333,tol:0.01,exp:"x³/3|₀¹=1/3≈0.333。"},
+   {type:"choice",q:"微积分基本定理：∫ₐᵇ f'(x)dx = ？",opts:["f(b)+f(a)","f(b)−f(a)","f'(b)−f'(a)","f(a)−f(b)"],ans:1,exp:"=F(b)−F(a)。"},
+   {type:"numeric",q:"∫₁³ 1 dx = ？",ans:2,tol:0.01,exp:"区间长度=3−1=2。"},
+   {type:"numeric",q:"∫₀^π sin(x) dx = ？",ans:2,tol:0.01,exp:"−cos(x)|₀^π=−(−1)−(−1)=2。"},
+   {type:"choice",q:"定积分 ∫ₐᵇ f(x)dx 的几何意义是：",opts:["曲线斜率","曲线下净面积","切线长度","函数值"],ans:1,exp:"表示曲线下的净有向面积。"}
+ ]},
+ {id:10,name:"换元法熔炉",nameEn:"Substitution Furnace",continent:0,boss:false,section:"§1.4(CLP2)",questions:[
+   {type:"numeric",q:"∫₀¹ 2x·e^(x²) dx = ？（用u=x²）",ans:1.718,tol:0.01,exp:"=e^(x²)|₀¹=e−1≈1.718。"},
+   {type:"choice",q:"换元 u=g(x) 时，du = ？",opts:["g(x)dx","g'(x)dx","g''(x)dx","dx"],ans:1,exp:"du=g'(x)dx。"},
+   {type:"numeric",q:"∫₀¹ 3x²(x³+1)' 形式...求 ∫₀¹ 2x dx = ？",ans:1,tol:0.01,exp:"x²|₀¹=1。"},
+   {type:"choice",q:"∫ cos(x)·sin(x) dx 可用 u = ？",opts:["cos(x)","sin(x)","tan(x)","x"],ans:1,exp:"u=sin(x),du=cos(x)dx。"},
+   {type:"numeric",q:"∫₀^(π/2) cos(x)·sin(x) dx = ？",ans:0.5,tol:0.01,exp:"sin²(x)/2|₀^(π/2)=1/2。"},
+   {type:"numeric",q:"∫₁² 1/x dx = ？",ans:0.693,tol:0.01,exp:"ln(x)|₁²=ln2≈0.693。"}
+ ]},
+ {id:11,name:"反常积分终境",nameEn:"Improper Integral Realm",continent:0,boss:true,section:"§1.12(CLP2)",questions:[
+   {type:"numeric",q:"∫₁^∞ 1/x² dx = ？",ans:1,tol:0.01,exp:"−1/x|₁^∞=0−(−1)=1。"},
+   {type:"choice",q:"∫₁^∞ 1/x dx 的结果是：",opts:["1","0","发散","ln2"],ans:2,exp:"ln(x)|₁^∞=∞，发散。"},
+   {type:"choice",q:"∫₁^∞ 1/xᵖ dx 收敛的条件：",opts:["p>1","p<1","p=1","p≥0"],ans:0,exp:"p>1时收敛。"},
+   {type:"numeric",q:"∫₀^∞ e^(−x) dx = ？",ans:1,tol:0.01,exp:"−e^(−x)|₀^∞=0−(−1)=1。"},
+   {type:"numeric",q:"∫₀^1 1/√x dx = ？",ans:2,tol:0.01,exp:"2√x|₀¹=2。"},
+   {type:"choice",q:"反常积分的处理方法是：",opts:["直接代入","取极限","求导","离散化"],ans:1,exp:"用极限定义处理无穷限或瑕点。"},
+   {type:"numeric",q:"∫₂^∞ 1/x² dx = ？",ans:0.5,tol:0.01,exp:"−1/x|₂^∞=0−(−1/2)=0.5。"}
+ ]},
+ // Continent 1: 线代帝国
+ {id:12,name:"线性方程城",nameEn:"Linear Equations City",continent:1,boss:false,section:"Ch.1",questions:[
+   {type:"choice",q:"方程组 x+y=3, x−y=1 的解是：",opts:["x=2,y=1","x=1,y=2","x=3,y=0","无解"],ans:0,exp:"相加得2x=4,x=2,y=1。"},
+   {type:"numeric",q:"方程组 2x+y=5, x−y=1 中 x = ？",ans:2,tol:0.01,exp:"相加3x=6,x=2。"},
+   {type:"choice",q:"齐次方程组 Ax=0 总有：",opts:["唯一解","零解","无解","无穷解"],ans:1,exp:"零向量总是齐次方程组的解。"},
+   {type:"choice",q:"高斯消元法将矩阵化为：",opts:["对角阵","行阶梯形","单位阵","零阵"],ans:1,exp:"化为行阶梯形求解。"},
+   {type:"choice",q:"方程组解的个数可能为：",opts:["仅1个","0或1或∞","仅0个","仅∞个"],ans:1,exp:"线性方程组有0个、1个或无穷多个解。"},
+   {type:"numeric",q:"方程组 x+2y=7, 3x−y=0 中 y = ？",ans:3,tol:0.01,exp:"x=y/3? 解:x=2y/...由3x=y,代入x+2y=7得y/3·... 3x−y=0⟹y=3x,代入x+6x=7,x=1,y=3。"}
+ ]},
+ {id:13,name:"变换森林",nameEn:"Transformation Forest",continent:1,boss:false,section:"§2.1,2.3",questions:[
+   {type:"choice",q:"线性变换必须满足：",opts:["T(0)=1","T(u+v)=T(u)+T(v)","T(cu)=c+T(u)","T(uv)=T(u)T(v)"],ans:1,exp:"线性变换保持加法与数乘。"},
+   {type:"choice",q:"旋转90°的矩阵作用于 (1,0) 得：",opts:["(0,1)","(1,0)","(0,−1)","(−1,0)"],ans:0,exp:"逆时针90°将(1,0)变为(0,1)。"},
+   {type:"numeric",q:"恒等变换 I 作用于向量 (5,3) 的第一分量为？",ans:5,tol:0.01,exp:"恒等变换不改变向量。"},
+   {type:"choice",q:"线性变换由什么唯一确定：",opts:["一个向量","基向量的像","行列式","迹"],ans:1,exp:"线性变换由基的像完全确定。"},
+   {type:"choice",q:"缩放矩阵 2I 作用使向量长度：",opts:["不变","变2倍","变一半","变0"],ans:1,exp:"标量2使每个分量翻倍。"},
+   {type:"numeric",q:"变换矩阵[[2,0],[0,3]]作用于(1,1)后第二分量为？",ans:3,tol:0.01,exp:"对角缩放:y分量×3=3。"}
+ ]},
+ {id:14,name:"矩阵乘法与逆",nameEn:"Matrix Mult & Inverse",continent:1,boss:true,section:"§2.3–2.4",questions:[
+   {type:"choice",q:"矩阵乘法 AB 一般：",opts:["=BA","≠BA","总为零","总相等"],ans:1,exp:"矩阵乘法不满足交换律。"},
+   {type:"numeric",q:"[[1,2],[3,4]]·[[1],[1]] 的第一个分量 = ？",ans:3,tol:0.01,exp:"1·1+2·1=3。"},
+   {type:"choice",q:"矩阵 A 可逆当且仅当：",opts:["det(A)=0","det(A)≠0","A对称","A为方阵即可"],ans:1,exp:"行列式非零等价于可逆。"},
+   {type:"numeric",q:"2×2矩阵[[2,0],[0,2]]的行列式 = ？",ans:4,tol:0.01,exp:"2·2−0=4。"},
+   {type:"choice",q:"(AB)⁻¹ = ？",opts:["A⁻¹B⁻¹","B⁻¹A⁻¹","AB","BA"],ans:1,exp:"逆的乘积顺序颠倒。"},
+   {type:"numeric",q:"单位矩阵 I 的行列式 = ？",ans:1,tol:0.01,exp:"det(I)=1。"},
+   {type:"choice",q:"AA⁻¹ = ？",opts:["A","0","I","A²"],ans:2,exp:"逆矩阵定义:AA⁻¹=I。"}
+ ]},
+ {id:15,name:"子空间高地",nameEn:"Subspace Highlands",continent:1,boss:false,section:"Ch.3",questions:[
+   {type:"choice",q:"子空间必须包含：",opts:["所有向量","零向量","单位向量","基向量"],ans:1,exp:"子空间必含零向量。"},
+   {type:"choice",q:"列空间 Col(A) 是：",opts:["行的张成","列的张成","零空间","核"],ans:1,exp:"Col(A)是A各列向量张成的空间。"},
+   {type:"numeric",q:"R³ 的维数是 ？",ans:3,tol:0.01,exp:"R³维数为3。"},
+   {type:"choice",q:"零空间 Null(A) 是满足什么的 x 集合：",opts:["Ax=0","Ax=b","Ax=x","Ax=1"],ans:0,exp:"零空间是Ax=0的解集。"},
+   {type:"numeric",q:"两个线性无关向量张成的空间维数为？",ans:2,tol:0.01,exp:"维数=2。"},
+   {type:"choice",q:"秩-零度定理：rank+nullity = ？",opts:["行数","列数","det","迹"],ans:1,exp:"rank+nullity等于列数n。"}
+ ]},
+ {id:16,name:"线性空间",nameEn:"Linear Spaces",continent:1,boss:false,section:"Ch.4",questions:[
+   {type:"choice",q:"向量空间的基必须：",opts:["线性相关","线性无关且张成","只张成","只无关"],ans:1,exp:"基既线性无关又张成整个空间。"},
+   {type:"numeric",q:"R⁴ 的标准基有多少个向量？",ans:4,tol:0.01,exp:"标准基含4个单位向量。"},
+   {type:"choice",q:"维数的定义是：",opts:["向量个数","基中向量个数","行数","非零元个数"],ans:1,exp:"维数=基中向量个数。"},
+   {type:"choice",q:"若 n 个向量线性相关，则它们：",opts:["构成基","张成全空间","至少一个是其他线性组合","正交"],ans:2,exp:"相关意味着某向量可由其他表出。"},
+   {type:"numeric",q:"次数≤2的多项式空间 P₂ 的维数为？",ans:3,tol:0.01,exp:"基{1,x,x²}，维数3。"},
+   {type:"choice",q:"坐标向量依赖于：",opts:["所选的基","行列式","范数","迹"],ans:0,exp:"坐标随基的选择而变。"}
+ ]},
+ {id:17,name:"正交圣殿",nameEn:"Orthogonal Temple",continent:1,boss:false,section:"§5.1–5.3",questions:[
+   {type:"choice",q:"两向量正交当且仅当其点积：",opts:["=1","=0","=−1","最大"],ans:1,exp:"正交即点积为0。"},
+   {type:"numeric",q:"向量 (3,4) 的模长 = ？",ans:5,tol:0.01,exp:"√(9+16)=5。"},
+   {type:"numeric",q:"(1,0,0)·(0,1,0) = ？",ans:0,tol:0.01,exp:"正交，点积0。"},
+   {type:"choice",q:"Gram-Schmidt 过程用于构造：",opts:["对角阵","正交基","逆矩阵","特征值"],ans:1,exp:"将一组基正交化。"},
+   {type:"choice",q:"正交矩阵 Q 满足：",opts:["QᵀQ=I","Q=Qᵀ","det=0","Q²=0"],ans:0,exp:"正交矩阵列正交单位化，QᵀQ=I。"},
+   {type:"numeric",q:"单位向量的模长为？",ans:1,tol:0.01,exp:"单位向量模长=1。"}
+ ]},
+ {id:18,name:"最小二乘OLS",nameEn:"Least Squares Origin",continent:1,boss:true,section:"§5.4–5.5",questions:[
+   {type:"choice",q:"最小二乘法最小化：",opts:["残差和","残差平方和","参数和","数据和"],ans:1,exp:"OLS最小化残差平方和。"},
+   {type:"choice",q:"正规方程为：",opts:["Ax=b","AᵀAx=Aᵀb","Ax=0","AAᵀx=b"],ans:1,exp:"最小二乘解满足AᵀAx̂=Aᵀb。"},
+   {type:"choice",q:"投影把 b 投到：",opts:["零空间","列空间","行空间","全空间"],ans:1,exp:"投影到A的列空间得最近点。"},
+   {type:"numeric",q:"点(1,1),(2,2),(3,3)的最佳拟合直线斜率为？",ans:1,tol:0.01,exp:"完美共线，斜率1。"},
+   {type:"choice",q:"残差向量与列空间：",opts:["平行","正交","相同","无关"],ans:1,exp:"最优时残差正交于列空间。"},
+   {type:"numeric",q:"数据(0,0),(2,4)拟合过原点直线 y=kx 的 k = ？",ans:2,tol:0.01,exp:"k=4/2=2。"},
+   {type:"choice",q:"OLS在统计中对应：",opts:["分类","线性回归","聚类","降维"],ans:1,exp:"OLS即线性回归的解法。"}
+ ]},
+ {id:19,name:"行列式",nameEn:"Determinants",continent:1,boss:false,section:"§6.1–6.2",questions:[
+   {type:"numeric",q:"det([[3,0],[0,5]]) = ？",ans:15,tol:0.01,exp:"对角阵行列式=3·5=15。"},
+   {type:"numeric",q:"det([[1,2],[3,4]]) = ？",ans:-2,tol:0.01,exp:"1·4−2·3=−2。"},
+   {type:"choice",q:"det(A)=0 表示矩阵：",opts:["可逆","不可逆","对称","正交"],ans:1,exp:"行列式为0则不可逆（奇异）。"},
+   {type:"choice",q:"交换两行使行列式：",opts:["不变","变号","加倍","为0"],ans:1,exp:"交换两行行列式变号。"},
+   {type:"numeric",q:"det(2I₂)（2×2）= ？",ans:4,tol:0.01,exp:"det([[2,0],[0,2]])=4。"},
+   {type:"choice",q:"det(AB) = ？",opts:["det(A)+det(B)","det(A)det(B)","det(A)−det(B)","0"],ans:1,exp:"det(AB)=det(A)det(B)。"}
+ ]},
+ {id:20,name:"特征值火山",nameEn:"Eigenvalue Volcano",continent:1,boss:true,section:"§7.1–7.3",questions:[
+   {type:"choice",q:"特征方程为：",opts:["Av=λv","Av=0","det(A)=λ","Av=λ"],ans:0,exp:"Av=λv，v为特征向量。"},
+   {type:"numeric",q:"对角阵 diag(2,5) 的最大特征值为？",ans:5,tol:0.01,exp:"对角元即特征值，最大为5。"},
+   {type:"choice",q:"求特征值需解：",opts:["det(A−λI)=0","det(A)=0","A=λI","Av=v"],ans:0,exp:"特征多项式det(A−λI)=0。"},
+   {type:"numeric",q:"[[2,0],[0,3]]的特征值之和（=迹）为？",ans:5,tol:0.01,exp:"特征值和=迹=2+3=5。"},
+   {type:"numeric",q:"[[3,0],[0,4]]的特征值之积（=det）为？",ans:12,tol:0.01,exp:"特征值积=det=12。"},
+   {type:"choice",q:"对称矩阵的特征值一定是：",opts:["复数","实数","零","负数"],ans:1,exp:"实对称矩阵特征值都是实数。"},
+   {type:"choice",q:"可对角化要求：",opts:["特征向量构成基","行列式为0","对称","正交"],ans:0,exp:"有n个线性无关特征向量即可对角化。"}
+ ]},
+ {id:21,name:"SVD终境",nameEn:"SVD Final Realm",continent:1,boss:true,section:"Ch.8",questions:[
+   {type:"choice",q:"SVD 将矩阵分解为：",opts:["A=UΣVᵀ","A=PDP⁻¹","A=LU","A=QR"],ans:0,exp:"奇异值分解A=UΣVᵀ。"},
+   {type:"choice",q:"Σ 中的奇异值是：",opts:["AᵀA特征值","AᵀA特征值的平方根","det","迹"],ans:1,exp:"奇异值=AᵀA特征值的非负平方根。"},
+   {type:"choice",q:"U 和 V 的列是：",opts:["任意向量","正交向量","特征值","行列式"],ans:1,exp:"U、V列为正交（单位）向量。"},
+   {type:"numeric",q:"奇异值总是：填1表示非负,0表示可为负",ans:1,tol:0.01,exp:"奇异值σ≥0非负。"},
+   {type:"choice",q:"SVD在数据分析中常用于：",opts:["排序","降维/PCA","加密","排版"],ans:1,exp:"SVD是PCA和降维的核心。"},
+   {type:"choice",q:"最大奇异值等于矩阵的：",opts:["迹","2-范数","行列式","秩"],ans:1,exp:"σ_max=矩阵的谱范数(2-范数)。"},
+   {type:"choice",q:"矩阵的秩等于非零奇异值的：",opts:["和","个数","积","平方"],ans:1,exp:"秩=非零奇异值个数。"}
+ ]},
+ // Continent 2: 概率神州
+ {id:22,name:"组合地下城",nameEn:"Combinatorics Dungeon",continent:2,boss:false,section:"Ch.1",questions:[
+   {type:"numeric",q:"5! = ？",ans:120,tol:0.01,exp:"5·4·3·2·1=120。"},
+   {type:"numeric",q:"C(5,2)（5选2）= ？",ans:10,tol:0.01,exp:"5!/(2!3!)=10。"},
+   {type:"numeric",q:"从4个人中选2人排队 P(4,2) = ？",ans:12,tol:0.01,exp:"4·3=12。"},
+   {type:"choice",q:"组合与排列的区别在于是否考虑：",opts:["重复","顺序","符号","正负"],ans:1,exp:"排列考虑顺序，组合不考虑。"},
+   {type:"numeric",q:"C(6,0) = ？",ans:1,tol:0.01,exp:"任何C(n,0)=1。"},
+   {type:"numeric",q:"投掷2个骰子共有多少种结果？",ans:36,tol:0.01,exp:"6×6=36。"}
+ ]},
+ {id:23,name:"公理荒野",nameEn:"Axiom Wilderness",continent:2,boss:false,section:"Ch.2",questions:[
+   {type:"numeric",q:"掷一枚均匀硬币正面概率 = ？",ans:0.5,tol:0.01,exp:"P(正)=1/2=0.5。"},
+   {type:"choice",q:"概率公理中 P(Ω) = ？",opts:["0","0.5","1","∞"],ans:2,exp:"全样本空间概率为1。"},
+   {type:"numeric",q:"掷骰子得偶数的概率 = ？",ans:0.5,tol:0.01,exp:"{2,4,6}/6=1/2。"},
+   {type:"choice",q:"互斥事件 A,B 有 P(A∪B) = ？",opts:["P(A)P(B)","P(A)+P(B)","P(A)−P(B)","0"],ans:1,exp:"互斥时P(A∪B)=P(A)+P(B)。"},
+   {type:"numeric",q:"P(A)=0.3，则 P(Aᶜ) = ？",ans:0.7,tol:0.01,exp:"补事件:1−0.3=0.7。"},
+   {type:"numeric",q:"从一副52张牌抽到红桃的概率 = ？",ans:0.25,tol:0.01,exp:"13/52=0.25。"}
+ ]},
+ {id:24,name:"条件概率沼泽",nameEn:"Conditional Prob Swamp",continent:2,boss:true,section:"Ch.3",questions:[
+   {type:"choice",q:"条件概率 P(A|B) = ？",opts:["P(A)P(B)","P(A∩B)/P(B)","P(A)+P(B)","P(B)/P(A)"],ans:1,exp:"P(A|B)=P(A∩B)/P(B)。"},
+   {type:"numeric",q:"掷骰子，已知结果为偶数，是2的条件概率 = ？",ans:0.3333,tol:0.01,exp:"1/3≈0.333。"},
+   {type:"choice",q:"独立事件满足 P(A∩B) = ？",opts:["P(A)+P(B)","P(A)P(B)","0","P(A|B)"],ans:1,exp:"独立时P(A∩B)=P(A)P(B)。"},
+   {type:"choice",q:"贝叶斯定理用于：",opts:["求和","由结果反推原因","排序","计数"],ans:1,exp:"贝叶斯更新先验为后验。"},
+   {type:"numeric",q:"两次独立掷硬币都正面的概率 = ？",ans:0.25,tol:0.01,exp:"0.5×0.5=0.25。"},
+   {type:"choice",q:"全概率公式将 P(A) 分解为：",opts:["各条件概率加权和","乘积","差","商"],ans:0,exp:"P(A)=ΣP(A|Bᵢ)P(Bᵢ)。"},
+   {type:"numeric",q:"P(A∩B)=0.2,P(B)=0.5,则 P(A|B) = ？",ans:0.4,tol:0.01,exp:"0.2/0.5=0.4。"}
+ ]},
+ {id:25,name:"随机变量山脉",nameEn:"Random Variable Mountains",continent:2,boss:false,section:"Ch.4",questions:[
+   {type:"numeric",q:"掷一枚均匀骰子的期望值 = ？",ans:3.5,tol:0.01,exp:"(1+2+...+6)/6=3.5。"},
+   {type:"choice",q:"离散随机变量的期望 E[X] = ？",opts:["Σx","Σx·P(x)","ΣP(x)","max x"],ans:1,exp:"E[X]=Σx·P(x)。"},
+   {type:"numeric",q:"伯努利(p=0.3)的期望 = ？",ans:0.3,tol:0.01,exp:"E[X]=p=0.3。"},
+   {type:"choice",q:"二项分布 B(n,p) 的期望为：",opts:["p","np","n","np(1−p)"],ans:1,exp:"E[X]=np。"},
+   {type:"numeric",q:"B(10,0.5) 的期望 = ？",ans:5,tol:0.01,exp:"np=10·0.5=5。"},
+   {type:"choice",q:"概率质量函数所有值之和 = ？",opts:["0","0.5","1","n"],ans:2,exp:"PMF总和为1。"}
+ ]},
+ {id:26,name:"连续分布平原",nameEn:"Continuous Distribution Plains",continent:2,boss:false,section:"Ch.5",questions:[
+   {type:"choice",q:"连续随机变量在某一点取值的概率：",opts:["很大","为0","为1","为0.5"],ans:1,exp:"连续型在单点概率为0。"},
+   {type:"numeric",q:"均匀分布 U(0,1) 的期望 = ？",ans:0.5,tol:0.01,exp:"(0+1)/2=0.5。"},
+   {type:"choice",q:"概率密度函数 f(x) 满足 ∫f(x)dx = ？",opts:["0","1","∞","x"],ans:1,exp:"全域积分为1。"},
+   {type:"numeric",q:"标准正态分布 N(0,1) 的均值 = ？",ans:0,tol:0.01,exp:"标准正态均值为0。"},
+   {type:"numeric",q:"标准正态分布的标准差 = ？",ans:1,tol:0.01,exp:"标准正态标准差为1。"},
+   {type:"choice",q:"指数分布常用于描述：",opts:["计数","等待时间","排名","比例"],ans:1,exp:"指数分布建模事件间隔/等待时间。"}
+ ]},
+ {id:27,name:"联合分布海域",nameEn:"Joint Distribution Ocean",continent:2,boss:true,section:"Ch.6",questions:[
+   {type:"choice",q:"X,Y 独立则联合密度 = ？",opts:["fₓ+f_Y","fₓ·f_Y","fₓ−f_Y","fₓ/f_Y"],ans:1,exp:"独立时联合=边缘之积。"},
+   {type:"choice",q:"边缘分布通过什么得到：",opts:["求导","对另一变量积分/求和","取最大","取平均"],ans:1,exp:"边缘化即对其他变量积分。"},
+   {type:"choice",q:"协方差 Cov(X,X) = ？",opts:["0","Var(X)","E[X]","1"],ans:1,exp:"Cov(X,X)=Var(X)。"},
+   {type:"numeric",q:"若 X,Y 独立，Cov(X,Y) = ？",ans:0,tol:0.01,exp:"独立则协方差为0。"},
+   {type:"choice",q:"相关系数 ρ 的取值范围：",opts:["[0,1]","[−1,1]","[0,∞)","全体实数"],ans:1,exp:"−1≤ρ≤1。"},
+   {type:"choice",q:"Cov(X,Y)=0 一定意味着独立吗？",opts:["一定","不一定","从不","只在正态下成立反推"],ans:1,exp:"不相关不一定独立(正态例外)。"},
+   {type:"numeric",q:"Var(X)=4,Var(Y)=9,Cov=0,则Var(X+Y) = ？",ans:13,tol:0.01,exp:"独立时Var(X+Y)=4+9=13。"}
+ ]},
+ {id:28,name:"期望神殿",nameEn:"Expectation Temple",continent:2,boss:true,section:"Ch.7",questions:[
+   {type:"choice",q:"期望的线性性 E[aX+b] = ？",opts:["aE[X]","aE[X]+b","E[X]+b","abE[X]"],ans:1,exp:"E[aX+b]=aE[X]+b。"},
+   {type:"numeric",q:"E[X]=3，则 E[2X+1] = ？",ans:7,tol:0.01,exp:"2·3+1=7。"},
+   {type:"choice",q:"方差 Var(X) = ？",opts:["E[X²]","E[X²]−(E[X])²","(E[X])²","E[X]"],ans:1,exp:"Var(X)=E[X²]−(E[X])²。"},
+   {type:"numeric",q:"E[X]=2,E[X²]=8,则 Var(X) = ？",ans:4,tol:0.01,exp:"8−4=4。"},
+   {type:"choice",q:"Var(aX) = ？",opts:["aVar(X)","a²Var(X)","aVar(X)+b","Var(X)"],ans:1,exp:"Var(aX)=a²Var(X)。"},
+   {type:"numeric",q:"Var(X)=5，则 Var(3X) = ？",ans:45,tol:0.01,exp:"9·5=45。"},
+   {type:"choice",q:"标准差是方差的：",opts:["平方","平方根","两倍","倒数"],ans:1,exp:"σ=√Var(X)。"}
+ ]},
+ {id:29,name:"极限定理终章",nameEn:"Limit Theorem Finale",continent:2,boss:true,section:"Ch.8",questions:[
+   {type:"choice",q:"中心极限定理说样本均值近似服从：",opts:["均匀分布","正态分布","指数分布","泊松分布"],ans:1,exp:"CLT：大样本均值趋于正态。"},
+   {type:"choice",q:"大数定律说明样本均值趋于：",opts:["0","总体均值","方差","中位数"],ans:1,exp:"LLN：样本均值收敛到期望。"},
+   {type:"numeric",q:"n个独立同分布(方差σ²=4)变量均值的方差，n=4时 = ？",ans:1,tol:0.01,exp:"σ²/n=4/4=1。"},
+   {type:"choice",q:"CLT 中样本量越大，均值分布越：",opts:["越宽","越接近正态","越偏斜","越离散"],ans:1,exp:"n增大，分布越接近正态且越集中。"},
+   {type:"numeric",q:"样本均值的标准误 = σ/√n，σ=10,n=100 时 = ？",ans:1,tol:0.01,exp:"10/√100=10/10=1。"},
+   {type:"choice",q:"切比雪夫不等式给出：",opts:["精确概率","概率上界","均值","方差"],ans:1,exp:"切比雪夫给偏离均值的概率上界。"},
+   {type:"choice",q:"CLT 的前提通常要求样本：",opts:["相关","独立同分布","正态","有限个"],ans:1,exp:"i.i.d.是经典CLT的前提。"}
+ ]}
+];
+// fix room 5 q5 ans (had ans2)
+ROOMS[5].questions[4].ans = 160;
+
+const CHARACTERS = {
+ // Era 0
+ "孔子":{nameEn:"Confucius",era:"先秦",eraIndex:0,desc:"主张仁与礼，强调修身、为政以德，以学习与自省成就君子人格。"},
+ "孟子":{nameEn:"Mencius",era:"先秦",eraIndex:0,desc:"性善论者，倡仁政与民本，认为人皆有恻隐之心，可扩充为德。"},
+ "荀子":{nameEn:"Xunzi",era:"先秦",eraIndex:0,desc:"性恶论者，重礼法与师法之化，强调后天学习对人的塑造。"},
+ "墨子":{nameEn:"Mozi",era:"先秦",eraIndex:0,desc:"主张兼爱、非攻、尚贤，重实用与逻辑，开中国早期论辩之风。"},
+ "庄子":{nameEn:"Zhuangzi",era:"先秦",eraIndex:0,desc:"逍遥齐物，泯灭分别，追求与道合一的精神自由。"},
+ "韩非子":{nameEn:"Han Feizi",era:"先秦",eraIndex:0,desc:"法家集大成者，主张以法、术、势治国，冷峻而重制度。"},
+ "苏格拉底":{nameEn:"Socrates",era:"古希腊",eraIndex:0,desc:"以诘问法追求定义与真知，强调'认识你自己'与无知之知。"},
+ "柏拉图":{nameEn:"Plato",era:"古希腊",eraIndex:0,desc:"理念论者，认为可感世界是理念的摹本，真知通向永恒形式。"},
+ "亚里士多德":{nameEn:"Aristotle",era:"古希腊",eraIndex:0,desc:"百科全书式学者，创立形式逻辑，重经验观察与中道之德。"},
+ // Era 1
+ "董仲舒":{nameEn:"Dong Zhongshu",era:"两汉",eraIndex:1,desc:"提出天人感应与大一统，融合阴阳，确立儒学独尊地位。"},
+ "司马迁":{nameEn:"Sima Qian",era:"两汉",eraIndex:1,desc:"著《史记》，究天人之际、通古今之变，成一家之言。"},
+ "班固":{nameEn:"Ban Gu",era:"两汉",eraIndex:1,desc:"著《汉书》，确立断代史体例，重礼法与正统。"},
+ "郑玄":{nameEn:"Zheng Xuan",era:"两汉",eraIndex:1,desc:"遍注群经，集汉代经学之大成，重训诂考据。"},
+ "王充":{nameEn:"Wang Chong",era:"两汉",eraIndex:1,desc:"著《论衡》，疾虚妄、重实证，批判天人感应的迷信成分。"},
+ "西塞罗":{nameEn:"Cicero",era:"罗马",eraIndex:1,desc:"传播斯多葛与自然法思想，强调理性、共和与公共德性。"},
+ "塞涅卡":{nameEn:"Seneca",era:"罗马",eraIndex:1,desc:"斯多葛学派，主张节制欲望、顺应自然、以理性面对命运。"},
+ "马可·奥勒留":{nameEn:"Marcus Aurelius",era:"罗马",eraIndex:1,desc:"哲人皇帝，《沉思录》倡自省、尽责与对宇宙秩序的顺从。"},
+ // Era 2
+ "王弼":{nameEn:"Wang Bi",era:"魏晋",eraIndex:2,desc:"玄学代表，以无为本，注《老》《易》，贵无重玄。"},
+ "郭象":{nameEn:"Guo Xiang",era:"魏晋",eraIndex:2,desc:"注《庄子》，主张独化于玄冥，万物自生自得。"},
+ "嵇康":{nameEn:"Ji Kang",era:"魏晋",eraIndex:2,desc:"竹林名士，越名教而任自然，重养生与音律之理。"},
+ "阮籍":{nameEn:"Ruan Ji",era:"魏晋",eraIndex:2,desc:"竹林七贤，以放达佯狂避世，咏怀寄寓深沉。"},
+ "普罗提诺":{nameEn:"Plotinus",era:"古典晚期",eraIndex:2,desc:"新柏拉图主义奠基者，万物由太一流溢，灵魂可上溯归一。"},
+ "奥古斯丁":{nameEn:"Augustine",era:"古典晚期",eraIndex:2,desc:"融柏拉图与基督教，探讨时间、记忆与神恩，《忏悔录》传世。"},
+ // Era 3
+ "程颐":{nameEn:"Cheng Yi",era:"宋",eraIndex:3,desc:"理学奠基，主张性即理、涵养须用敬、进学在致知。"},
+ "程颢":{nameEn:"Cheng Hao",era:"宋",eraIndex:3,desc:"倡识仁、万物一体，重体认天理的温润气象。"},
+ "朱熹":{nameEn:"Zhu Xi",era:"宋",eraIndex:3,desc:"理学集大成，主格物致知、即物穷理，注四书定典范。"},
+ "陆九渊":{nameEn:"Lu Jiuyuan",era:"宋",eraIndex:3,desc:"心学先声，主'心即理'，强调发明本心、简易工夫。"},
+ "王阳明":{nameEn:"Wang Yangming",era:"明",eraIndex:3,desc:"心学集成，倡致良知与知行合一，事上磨练。"},
+ "王艮":{nameEn:"Wang Gen",era:"明",eraIndex:3,desc:"泰州学派，倡百姓日用即道，平民化的良知之学。"},
+ "阿奎那":{nameEn:"Aquinas",era:"经院",eraIndex:3,desc:"融亚里士多德与神学，以理性论证信仰，体系恢宏。"},
+ "奥卡姆的威廉":{nameEn:"William of Ockham",era:"经院",eraIndex:3,desc:"提出奥卡姆剃刀，主张如无必要勿增实体，唯名论者。"},
+ // Era 4
+ "顾炎武":{nameEn:"Gu Yanwu",era:"明清",eraIndex:4,desc:"倡经世致用、博学于文，重实证考据，'天下兴亡匹夫有责'。"},
+ "黄宗羲":{nameEn:"Huang Zongxi",era:"明清",eraIndex:4,desc:"《明夷待访录》批判君主专制，提出'天下为主君为客'。"},
+ "王夫之":{nameEn:"Wang Fuzhi",era:"明清",eraIndex:4,desc:"气一元论者，主理在气中、即事穷理，重历史变化。"},
+ "戴震":{nameEn:"Dai Zhen",era:"清",eraIndex:4,desc:"以训诂明义理，批判'以理杀人'，重情欲之正当。"},
+ "培根":{nameEn:"Francis Bacon",era:"启蒙",eraIndex:4,desc:"经验主义先驱，倡归纳法与'知识就是力量'。"},
+ "洛克":{nameEn:"John Locke",era:"启蒙",eraIndex:4,desc:"白板说与经验论，倡自然权利与社会契约、有限政府。"},
+ "休谟":{nameEn:"David Hume",era:"启蒙",eraIndex:4,desc:"怀疑论者，质疑因果必然性，主张习惯而非理性是经验之基。"},
+ "康德":{nameEn:"Kant",era:"启蒙",eraIndex:4,desc:"批判哲学，调和经验与理性，立定言命令，重义务与自律。"},
+ "卢梭":{nameEn:"Rousseau",era:"启蒙",eraIndex:4,desc:"社会契约与公意论者，倡自然状态的自由与人民主权。"},
+ // Era 5
+ "龚自珍":{nameEn:"Gong Zizhen",era:"晚清",eraIndex:5,desc:"呼唤变革，'我劝天公重抖擞'，反僵化求生机。"},
+ "魏源":{nameEn:"Wei Yuan",era:"晚清",eraIndex:5,desc:"'师夷长技以制夷'，编《海国图志》开眼看世界。"},
+ "康有为":{nameEn:"Kang Youwei",era:"晚清",eraIndex:5,desc:"托古改制，倡变法维新，《大同书》绘理想世界。"},
+ "梁启超":{nameEn:"Liang Qichao",era:"晚清",eraIndex:5,desc:"新民说倡导者，以笔为旗鼓吹维新与新民德。"},
+ "严复":{nameEn:"Yan Fu",era:"晚清",eraIndex:5,desc:"译《天演论》传进化论，'物竞天择'震动思想界。"},
+ "谭嗣同":{nameEn:"Tan Sitong",era:"晚清",eraIndex:5,desc:"《仁学》冲决网罗，以血荐变法，慷慨赴死。"},
+ "黑格尔":{nameEn:"Hegel",era:"19世纪",eraIndex:5,desc:"辩证法大师，绝对精神在正反合中自我展开历史。"},
+ "马克思":{nameEn:"Marx",era:"19世纪",eraIndex:5,desc:"历史唯物主义，揭示阶级斗争与资本逻辑，重在改变世界。"},
+ "穆勒":{nameEn:"J.S. Mill",era:"19世纪",eraIndex:5,desc:"功利主义与自由论者，倡个性自由与最大幸福原则。"},
+ "尼采":{nameEn:"Nietzsche",era:"19世纪",eraIndex:5,desc:"重估一切价值，倡权力意志与超人，宣告上帝已死。"},
+ // Era 6
+ "陈独秀":{nameEn:"Chen Duxiu",era:"五四",eraIndex:6,desc:"新文化运动旗手，高举民主与科学(德先生赛先生)。"},
+ "胡适":{nameEn:"Hu Shi",era:"五四",eraIndex:6,desc:"倡白话文与实验主义，'大胆假设，小心求证'。"},
+ "鲁迅":{nameEn:"Lu Xun",era:"五四",eraIndex:6,desc:"以笔为刀剖国民性，呐喊于铁屋，冷峻而深沉。"},
+ "梁漱溟":{nameEn:"Liang Shuming",era:"现代",eraIndex:6,desc:"东西文化比较，倡乡村建设，守护儒家生命之学。"},
+ "冯友兰":{nameEn:"Feng Youlan",era:"现代",eraIndex:6,desc:"新理学体系，以四境界说人生，贯通中西。"},
+ "金岳霖":{nameEn:"Jin Yuelin",era:"现代",eraIndex:6,desc:"逻辑学与知识论大家，著《论道》《知识论》，重严密分析。"},
+ "维特根斯坦":{nameEn:"Wittgenstein",era:"现代",eraIndex:6,desc:"语言哲学，前期论界限，后期论语言游戏与生活形式。"},
+ "海德格尔":{nameEn:"Heidegger",era:"现代",eraIndex:6,desc:"存在论追问'存在'，论此在、时间与向死而生。"},
+ "罗素":{nameEn:"Russell",era:"现代",eraIndex:6,desc:"逻辑分析与数理逻辑奠基，倡清晰、怀疑与人道关怀。"},
+ // Era 7
+ "牟宗三":{nameEn:"Mou Zongsan",era:"当代",eraIndex:7,desc:"新儒家代表，融康德重建道德形上学，论智的直觉。"},
+ "李泽厚":{nameEn:"Li Zehou",era:"当代",eraIndex:7,desc:"提出'积淀说'与'实用理性'，论美学与儒学现代转化。"},
+ "汪晖":{nameEn:"Wang Hui",era:"当代",eraIndex:7,desc:"反思现代性与中国思想，批判性审视全球化与历史。"},
+ "葛兆光":{nameEn:"Ge Zhaoguang",era:"当代",eraIndex:7,desc:"思想史家，重知识与信仰的一般状况，方法精审。"},
+ "福柯":{nameEn:"Foucault",era:"当代",eraIndex:7,desc:"以谱系学揭示权力与知识的交织，剖析规训与话语。"},
+ "哈贝马斯":{nameEn:"Habermas",era:"当代",eraIndex:7,desc:"交往理性与公共领域论者，重商谈伦理与共识。"},
+ "罗尔斯":{nameEn:"Rawls",era:"当代",eraIndex:7,desc:"《正义论》以无知之幕推导公平正义两原则。"},
+ "查尔斯·泰勒":{nameEn:"Charles Taylor",era:"当代",eraIndex:7,desc:"探讨现代自我、本真性与世俗时代的意义来源。"}
+};
+
+// Helper to build quotes: by continent (0 calc, 1 linalg, 2 prob)
+// Each philosopher gets entry[] (2) and completion[] (1).
+const PHILOSOPHER_QUOTES = {};
+(function(){
+ // math themes per continent for entry & completion
+ const Q = {
+  "孔子":{e:["学而时习之，不亦说乎？极限之渐近，正如温故而知新——一遍不解，再三可明。","知之为知之，不知为不知。微积分之妙，在于诚实面对每一处不懂，方能进德。"],c:["温故而知新，可以为师矣。此关已通，前路如登泰山，循阶而上必至其巅。"]},
+  "孟子":{e:["人皆有不忍人之心。变换矩阵虽冷，然其理可推可扩，犹四端之扩充于四海。","行有不得，反求诸己。一题不解，勿怨其难，反思其法，自有豁然之时。"],c:["尽其心者，知其性也。线代之理已得，扩而充之，万象皆可线性观之。"]},
+  "荀子":{e:["不积跬步，无以至千里。概率之学积小数成大数，正赖日日之功。","学不可以已。青出于蓝而胜于蓝，今日之习，必胜昨日之你。"],c:["锲而不舍，金石可镂。此章已成，足见后天之功足以化性起伪。"]},
+  "韩非子":{e:["法不阿贵，绳不挠曲。导数法则一丝不苟，循律而行，自无差错。","明主之道，必尽法度。微积分如法，依公式严密推演，乱则败，严则成。"],c:["事在四方，要在中央。法则既明，万变归宗，此关之破乃势所必然。"]},
+  "庄子":{e:["北冥有鱼，其名为鲲。极限趋于无穷，正如鲲化为鹏，扶摇而上九万里。","吾生也有涯，而知也无涯。然以有涯逐无穷之极限，亦逍遥之游也。"],c:["天地与我并生，万物与我为一。积分之合，亦泯彼此而归于一。"]},
+  "韩非子_x":{},
+  "墨子":{e:["兼相爱，交相利。线性组合者，诸向量交相成就，合而生新空间。","志不强者智不达。矩阵之逆虽难，强志以求，必得其解。"],c:["事无终始，无务多业。专攻线代一关，今已功成，可谓务本。"]},
+  "苏格拉底":{e:["我唯一知道的就是我一无所知。面对此极限，先承认未知，再以诘问求真。","未经省察的人生不值得过。每解一题，皆是对思维的一次省察。"],c:["认识你自己。此关之通，非记公式，乃识得你心之理性能及何处。"]},
+  "柏拉图":{e:["可感世界是理念的影子。函数图像不过是其背后理念之投影，求极限即窥其本。","真知是回忆。求导之法你本已具，今不过唤醒灵魂中沉睡的理念。"],c:["善的理念照亮一切。微积分之理已现，如出洞穴见真光。"]},
+  "亚里士多德":{e:["求知是人的本性。导数研究变化之因，正合吾探究万物动因之志。","德性在于中道。解题不可急躁亦不可怠惰，持中而进。"],c:["整体大于部分之和。积分将无数微元合为整体，此乃质料与形式之合。"]},
+  // Era1
+  "董仲舒":{e:["天人之际，合而为一。极限连结有限与无穷，正如天人感应之相通。","屈民而伸君，屈君而伸天。求导循理而行，理为至上。"],c:["大一统者，天地之常经。微积分万法归一，已得其统。"]},
+  "司马迁":{e:["究天人之际，通古今之变。求极限即究有限与无穷之际。","人固有一死，或重于泰山。一题之难，咬牙过之，亦成一家之功。"],c:["成一家之言。此章既成，你之学问已自成一格。"]},
+  "班固":{e:["断代为史，体例井然。导数法则各有其位，依序而用，不可紊乱。","礼者所以正身也。解题守法度，则心正而术精。"],c:["综其行事，旁贯五经。微积分诸法已贯通，可谓博洽。"]},
+  "郑玄":{e:["遍注群经，必究字义。每个符号皆有其训，先明定义再论极限。","述而不作，信而好古。求导公式乃先贤所立，谨守而善用之。"],c:["注疏既成，经义自明。此关训诂已通，理随之而显。"]},
+  "王充":{e:["疾虚妄，重实证。极限不可臆断，须以代入与验算证之。","事莫明于有效，论莫定于有证。每一答案皆当验证而后信。"],c:["实知见而后论。此章既以验算证成，方为真知。"]},
+  "西塞罗":{e:["理性是连接人与神的纽带。求极限正是以理性把握无穷。","哪里有理性，哪里就有自由。循微积分之理，思维方得自由。"],c:["为公共福祉而学。此学已成，当以之贡献于世。"]},
+  "塞涅卡":{e:["每一天都是新的人生。今日之极限，是今日独有的修炼。","困难磨砺心智。题愈难，则你之理性愈强。"],c:["生命如故事，重在质量而非长度。此关质优，足慰。"]},
+  "马可·奥勒留":{e:["专注于当下手中之事。心无旁骛地解此一题，便是尽责。","宇宙是流变，人生是判断。极限描述流变，判断使之可解。"],c:["做你本分之事。此章已尽责完成，心安理得。"]},
+  // Era2 神州 linalg/prob mixed; eras2 spans rooms 8-11 (calc) actually era index used for character display by completedCount; keep general.
+  "王弼":{e:["以无为本，万有归宗。空间之零向量，正是众向量所本之无。","得意而忘言。把握线变换之意，则符号可忘。"],c:["统之有宗，会之有元。线代之理已会其元，可谓得本。"]},
+  "郭象":{e:["物各自生，独化于玄冥。每个基向量自足自得，合而成空间。","无待而逍遥。矩阵运算依其自身之理，无待外求。"],c:["各适其性，则天机自张。此关已通，理顺性张。"]},
+  "嵇康":{e:["越名教而任自然。线代之美在其内在和谐，如琴音自然成律。","声无哀乐，理有定数。矩阵之变虽繁，其数有定。"],c:["目送归鸿，手挥五弦。此章如曲终，余韵悠长。"]},
+  "阮籍":{e:["时无英雄，使竖子成名。然解此题之英雄，正是此刻之你。","夜中不能寐，起坐弹鸣琴。困于一题之夜，正可深思。"],c:["大人先生，与造化推移。此关既破，心随理而舒。"]},
+  "普罗提诺":{e:["万物流溢于太一。诸多向量皆由基底流溢而出。","灵魂当上溯归一。解题之思，正是由繁归约于一理。"],c:["与太一合一。此章诸理已归于一，可谓上达。"]},
+  "奥古斯丁":{e:["我心不安，直到安息于真理。一题未解则心不安，解之则安。","时间是心灵的延展。极限与变化，皆心灵把握时间之方式。"],c:["信仰寻求理解。此关既通，信与理两得。"]},
+  // Era3
+  "程颐":{e:["涵养须用敬，进学在致知。解题持敬而专，致知在格此一题。","性即理也。矩阵之性即其理，穷其理则知其性。"],c:["格物穷理，今日格一物。此关之理已穷，明日再格其一。"]},
+  "程颢":{e:["仁者浑然与物同体。诸向量同处一空间，本为一体。","学者须先识仁。先识线代之大体，再究其细。"],c:["万物静观皆自得。此章已得，气象温润。"]},
+  "朱熹":{e:["今日格一件，明日格一件。每解一题，即格一物，积久贯通。","即物而穷其理。面对此矩阵，即物穷理，自有所得。"],c:["豁然贯通，众物之表里精粗无不到。此关已贯通矣。"]},
+  "陆九渊":{e:["心即理也，宇宙便是吾心。线代之理本在你心，发明之即得。","学苟知本，六经皆我注脚。明其本则诸题皆通。"],c:["发明本心，简易工夫终久大。此关以简驭繁，已成。"]},
+  "王阳明":{e:["知行合一。知此公式而不能解题，是未真知；行之方为知。","致良知。解题之是非，你心自知，依良知而判则不差。"],c:["事上磨练，方立得住。此关正是磨练之事，今已立住。"]},
+  "王艮":{e:["百姓日用即道。数学之理，亦在日用计算之间，平实可亲。","乐是乐此学，学是学此乐。解题之乐，即学之乐。"],c:["明哲保身，进退裕如。此章从容而过，可谓裕如。"]},
+  "阿奎那":{e:["信仰与理性并行不悖。线代以理性建构，秩序井然如神之造物。","凡存在皆有其因。矩阵之解必有其由，求之可得。"],c:["秩序是宇宙之美。此关秩序已明，理性之美彰显。"]},
+  "奥卡姆的威廉":{e:["如无必要，勿增实体。解线代当用最简之法，勿绕远路。","名相之外，唯个体真实。把握向量本身，勿迷于符号。"],c:["剃去冗余，直取要害。此关以简洁之道破之，妙。"]},
+  // Era4
+  "顾炎武":{e:["经世致用，学以致用。线代乃实用之器，OLS可拟万象之数据。","天下兴亡，匹夫有责。学好此数，亦是担当。"],c:["博学于文，行己有耻。此关已成，学问见诸实用。"]},
+  "黄宗羲":{e:["天下为主，君为客。数据为主，模型为客，以模型服务于真。","读书不多无以证斯理之变化。多解题以证其理。"],c:["待访之录，留于后世。此关之得，可传可用。"]},
+  "王夫之":{e:["理在气中，即事穷理。线代之理寓于具体运算之中。","天下日新，无旧无新。每日之学皆是新得。"],c:["即事以穷理，理成而事毕。此章事理两成。"]},
+  "戴震":{e:["以理杀人，不可不察。然此理为助人之理，循之得解。","由训诂以明义理。先明定义，则线代之义自显。"],c:["心之精爽，以知为本。此关既明，知本已立。"]},
+  "培根":{e:["知识就是力量。掌握线代，即掌握处理数据之力。","归纳始于观察。多观察矩阵之例，归纳其法则。"],c:["人是自然的仆役与解释者。此关已助你解读数据之自然。"]},
+  "洛克":{e:["心灵本是白板，经验书写其上。多做题，经验自会刻下方法。","理性是人的最高能力。以理性破解此线代之题。"],c:["自由源于法律之内。此关守规则而得自由，已成。"]},
+  "休谟":{e:["因果不过是习惯的联想。然数学之必然非习惯，乃逻辑——这正可信赖。","凡断言皆须经验检验。你的每个解，都要验算方可信。"],c:["温和的怀疑使人清醒。此关你既怀疑又验证，得真知矣。"]},
+  "康德":{e:["要这样行动：使你的准则成为普遍法则。解题之法，须能普遍适用方为真法。","人为自然立法。线代之结构，正是理性为数据立法。"],c:["头上的星空，心中的道德律。此关之严密，正合理性之律。"]},
+  "卢梭":{e:["人生而自由，却无往不在枷锁中。数学之规则非枷锁，乃通向自由之径。","回归自然，亦回归本心。解题回归基本定义，自然得解。"],c:["公意指向公共善。此关之得，亦你思维之公意所成。"]},
+  // Era5
+  "龚自珍":{e:["我劝天公重抖擞，不拘一格降人才。解此概率之题，正需抖擞精神。","落红不是无情物，化作春泥更护花。错题非无用，化为经验护你前行。"],c:["九州生气恃风雷。此关如风雷既过，生气勃发。"]},
+  "魏源":{e:["师夷长技以制夷。概率统计乃西学长技，学之以强己。","睁眼看世界。概率正是看清不确定世界之法。"],c:["海国图志，开拓眼界。此关已拓你之眼界。"]},
+  "康有为":{e:["托古改制，因时而变。概率之新法，正可革旧观之命。","大同之世，可期可求。掌握期望与方差，可窥大数之同。"],c:["变则通，通则久。此关一变而通，可久。"]},
+  "梁启超":{e:["少年强则国强。今日强于概率，则明日强于决策。","新民为今日第一急务。以新知更新自己，正是新民。"],c:["纸笔之间，可动山河。此关之得，他日必有大用。"]},
+  "严复":{e:["物竞天择，适者生存。概率正描述这随机竞择之律。","信达雅，求其真。解题亦求信达——答案须真且清晰。"],c:["天演之理已通。此关如演化一程，适者乃成。"]},
+  "谭嗣同":{e:["冲决一切网罗。冲决对概率的畏惧之网，勇往直前。","我自横刀向天笑。面对难题，亦当有此豪气。"],c:["去留肝胆两昆仑。此关既破，肝胆照人。"]},
+  "黑格尔":{e:["凡合理的皆现实。概率分布之合理，必现实可解。","真理是全体。把握概率之全貌，则部分自明。"],c:["正反合，螺旋上升。此关经否定之否定，得更高之知。"]},
+  "马克思":{e:["哲学家只是解释世界，问题在于改变它。学概率以改变你的决策世界。","历史是人民创造的。每一道题的攻克，都是你历史的一笔。"],c:["从必然王国到自由王国。此关既通，你于不确定中得自由。"]},
+  "穆勒":{e:["最大多数人的最大幸福。概率帮我们在不确定中求最优期望。","个性自由是进步之源。以你之法解题，勿盲从。"],c:["真理愈辩愈明。此关多方验证，真理已明。"]},
+  "尼采":{e:["那不能杀死我的，使我更强大。这道难题正会使你更强。","成为你自己。以你独特的思路征服此概率之题。","凡杀不死我者必使我强大——错了便再来，强大自此而生。"],c:["重估一切价值。此关已成，你已重估自己之能。"]},
+  // Era6
+  "陈独秀":{e:["德先生与赛先生。概率统计正是赛先生(科学)之利器。","青年如初春，如朝日。以朝气攻克此题。"],c:["科学与人权并重。此关以科学之法成之，可贺。"]},
+  "胡适":{e:["大胆假设，小心求证。解概率题正需此态度。","为学要如金字塔，要能广大要能高。基础广则高可期。"],c:["怕什么真理无穷，进一寸有一寸的欢喜。此关进了一寸，喜哉。"]},
+  "鲁迅":{e:["其实地上本没有路，走的人多了便成了路。解题之路，亦是走出来的。","真的猛士，敢于直面惨淡的题目。直面它，便已胜了一半。"],c:["不在沉默中爆发，便在沉默中灭亡。此关你选择了爆发，赞。"]},
+  "梁漱溟":{e:["这个世界会好吗？会的——只要你肯一题一题地解。","人生在勉。概率虽难，勉力为之则成。"],c:["三种人生态度，唯进取可破此关。今已破之。"]},
+  "冯友兰":{e:["人生四境界，今你在求道之途。解此题即向天地境界迈进。","照着讲不如接着讲。理解概率之后，要能自己接着推演。"],c:["极高明而道中庸。此关之解，高明而平实。"]},
+  "金岳霖":{e:["逻辑是思维的骨架。概率推理须逻辑严密，不可含糊。","知识始于所与。从已知数据出发，严密推得结论。"],c:["论道有得，知识有据。此关逻辑严整，已成。"]},
+  "维特根斯坦":{e:["凡可言说的，须说清楚。概率之命题，须精确表述。","语言的界限即世界的界限。掌握概率语言，拓展你的世界。"],c:["对不可说的，应保持沉默；可算的，则算清楚。此关已算清。"]},
+  "海德格尔":{e:["向死而生，方知当下之珍贵。专注于此刻之题。","存在先于追问。先把握概率之存在，再追问其理。"],c:["诗意地栖居于数学之中。此关栖居既安，可前行。"]},
+  "罗素":{e:["参差多态乃幸福本源。概率正研究世界之多态。","须知参透此理者寡，故你之努力可贵。怀疑而后求证。"],c:["三种激情支配我的一生：爱、知识与悲悯。此关之知，已得。"]},
+  // Era7
+  "牟宗三":{e:["良知坎陷以开出知识。今坎陷于概率之学，正是开出新知。","智的直觉可通天德。解题之顿悟，亦近此直觉。"],c:["道德形上学已立。此关之理，亦纳入你之心体。"]},
+  "李泽厚":{e:["实用理性，重经验之积淀。概率正是经验积淀为理性之学。","美是自由的形式。解题流畅时，自有数学之美。"],c:["积淀成性。此关之得，已积淀为你之能力。"]},
+  "汪晖":{e:["反思现代性。概率统计是现代性之工具，用之亦当反思。","历史没有终结。你的学习之路，亦在不断展开。"],c:["在批判中前行。此关既以批判之眼审视而过，扎实。"]},
+  "葛兆光":{e:["关注一般知识与信仰。概率正是现代人之一般知识。","思想史在细节中。每一道题的细节，皆值得细究。"],c:["层层剥茧，方见本相。此关已剥见本相。"]},
+  "福柯":{e:["知识与权力交织。掌握概率知识，亦获分析世界之权力。","拒绝既定，重新提问。换个角度，难题或迎刃而解。"],c:["人的概念终将如海边沙痕被抹去——但你此刻之知，真实可靠。此关已成。"]},
+  "哈贝马斯":{e:["在理性商谈中达成共识。与自己的思路商谈，求得正解。","公共领域需要清明的理性。概率推理须清明无蔽。"],c:["交往理性达成共识。此关你与题达成了共识，妙。"]},
+  "罗尔斯":{e:["无知之幕下选择正义。概率正研究无知(不确定)下的最优选择。","正义即公平。给每道题公平的思考，则解可得。"],c:["作为公平的正义已立。此关公平待之，亦公平回报你。"]},
+  "查尔斯·泰勒":{e:["本真性是现代之理想。以你本真之思解此题。","意义在对话中生成。与题对话，意义自显。"],c:["世俗时代仍可寻得意义。此关之得，即一种意义。"]}
+ };
+ for(const name in CHARACTERS){
+   let q = Q[name];
+   if(!q){ q = {e:["静心解题，循理而进。","一步一步来，难关终可破。"],c:["此关已成，继续前行。"]}; }
+   PHILOSOPHER_QUOTES[name] = {
+     entry: q.e.map(s=>({phil:s, math:""})),
+     completion: q.c.map(s=>({phil:s, math:""}))
+   };
+ }
+})();
+
+const SIDE_NODES = [
+ {id:0,name:"自然地理",nameEn:"Physical Geography",required:false,category:"sci"},
+ {id:1,name:"数据结构",nameEn:"Data Structures",required:false,category:"cs"},
+ {id:2,name:"哲学",nameEn:"Philosophy",required:false,category:"hum"},
+ {id:3,name:"韩语",nameEn:"Korean",required:false,category:"lang"},
+ {id:4,name:"俄语",nameEn:"Russian",required:false,category:"lang"},
+ {id:5,name:"法语",nameEn:"French",required:false,category:"lang"},
+ {id:6,name:"金融学",nameEn:"Finance",required:false,category:"soc"},
+ {id:7,name:"钢琴",nameEn:"Piano",required:false,category:"art"},
+ {id:8,name:"电吉他",nameEn:"Electric Guitar",required:false,category:"art"},
+ {id:9,name:"MATLAB",nameEn:"MATLAB",required:false,category:"cs"},
+ {id:10,name:"ArcGIS",nameEn:"ArcGIS",required:false,category:"cs"},
+ {id:11,name:"ABM",nameEn:"Agent-Based Modeling",required:false,category:"cs"},
+ {id:12,name:"计算机组成原理",nameEn:"Computer Organization",required:false,category:"cs"},
+ {id:13,name:"计算机网络",nameEn:"Computer Networks",required:false,category:"cs"},
+ {id:14,name:"操作系统",nameEn:"Operating Systems",required:false,category:"cs"},
+ {id:15,name:"JavaScript",nameEn:"JavaScript",required:false,category:"cs"},
+ {id:16,name:"物理学",nameEn:"Physics",required:false,category:"sci"},
+ {id:17,name:"经济学",nameEn:"Economics",required:true,category:"soc"},
+ {id:18,name:"Python数据分析",nameEn:"Python Data Analysis",required:true,category:"cs"},
+ {id:19,name:"英文",nameEn:"English",required:true,category:"lang"}
+];
+
+/* ============================================================
+   2. STATE MANAGEMENT
+   ============================================================ */
+const LS = {
+  token:"jmrpg_token", gistId:"jmrpg_gistId", localState:"jmrpg_state", skip:"jmrpg_skip"
+};
+let state = null;
+let ui = {
+  view:"onboarding",      // onboarding | main
+  continent:0,
+  quiz:null,              // active quiz object
+  modal:null,             // 'eralog' | {type:'node',id} | null
+  syncStatus:"offline",
+  token:null, gistId:null, offline:false
+};
+
+function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function dateDiffDays(a,b){ const da=new Date(a+"T00:00:00"), db=new Date(b+"T00:00:00"); return Math.round((db-da)/86400000); }
+
+function defaultState(){
+  return {version:1,xp:0,streak:0,lastActiveDate:todayStr(),currentEra:0,
+    completedRooms:[],resetRooms:[],visitedNodes:{},nodeNotes:{},todayCompleted:[],charCycle:{}};
+}
+function normalizeState(s){
+  const d=defaultState();
+  if(!s||typeof s!=="object") return d;
+  for(const k in d){ if(s[k]===undefined) s[k]=d[k]; }
+  return s;
+}
+function saveLocal(){ try{ localStorage.setItem(LS.localState, JSON.stringify(state)); }catch(e){} }
+
+/* ============================================================
+   3. GITHUB GIST API
+   ============================================================ */
+const API="https://api.github.com";
+function ghHeaders(token){ return {"Authorization":"token "+token,"Accept":"application/vnd.github+json","Content-Type":"application/json"}; }
+
+async function validateToken(token){
+  try{ const r=await fetch(API+"/user",{headers:ghHeaders(token)}); return r.ok; }catch(e){ return false; }
+}
+async function findOrCreateGist(token){
+  // try existing gistId
+  try{
+    let r=await fetch(API+"/gists?per_page=100",{headers:ghHeaders(token)});
+    if(r.ok){
+      const list=await r.json();
+      const found=list.find(g=>g.description==="jupiter-math-rpg-save");
+      if(found) return found.id;
+    }
+  }catch(e){}
+  // create new
+  try{
+    const r=await fetch(API+"/gists",{method:"POST",headers:ghHeaders(token),
+      body:JSON.stringify({description:"jupiter-math-rpg-save",public:false,files:{"save.json":{content:JSON.stringify(defaultState())}}})});
+    if(r.ok){ const g=await r.json(); return g.id; }
+  }catch(e){}
+  return null;
+}
+async function loadGist(token,gistId){
+  try{
+    const r=await fetch(API+"/gists/"+gistId,{headers:ghHeaders(token)});
+    if(!r.ok) return null;
+    const g=await r.json();
+    const f=g.files&&g.files["save.json"];
+    if(f&&f.content){ return JSON.parse(f.content); }
+  }catch(e){}
+  return null;
+}
+let saveTimer=null;
+function debouncedSave(){
+  saveLocal();
+  if(ui.offline||!ui.token||!ui.gistId) return;
+  setSync("syncing");
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer=setTimeout(async ()=>{
+    try{
+      const r=await fetch(API+"/gists/"+ui.gistId,{method:"PATCH",headers:ghHeaders(ui.token),
+        body:JSON.stringify({files:{"save.json":{content:JSON.stringify(state)}}})});
+      setSync(r.ok?"synced":"error");
+    }catch(e){ setSync("error"); }
+  },2000);
+}
+function setSync(s){ ui.syncStatus=s; const el=document.querySelector(".sync-ind"); if(el){ el.className="sync-ind "+s; el.textContent=syncLabel(s); } }
+function syncLabel(s){ return {syncing:"⟳ 同步中",synced:"✓ 已同步",error:"✗ 同步失败",offline:"离线模式"}[s]||s; }
+
+/* ============================================================
+   4. GAME LOGIC
+   ============================================================ */
+function getEraIndex(count){
+  if(count<=3) return 0; if(count<=7) return 1; if(count<=11) return 2; if(count<=15) return 3;
+  if(count<=19) return 4; if(count<=22) return 5; if(count<=25) return 6; return 7;
+}
+function getRoomStatus(id){
+  if(state.completedRooms.includes(id)) return "completed";
+  if(state.resetRooms.includes(id)) return "reset";
+  if(canEnterRoom(id)) return "available";
+  return "locked";
+}
+function canEnterRoom(id){
+  if(state.resetRooms.includes(id)) return true;
+  if(id===0) return true;
+  // previous room must be completed and not pending reset
+  const prev=id-1;
+  return state.completedRooms.includes(prev) && !state.resetRooms.includes(prev);
+}
+function applyEraTheme(idx){
+  const t=ERA_THEMES[idx]; const r=document.documentElement.style;
+  r.setProperty("--bg",t.bg); r.setProperty("--primary",t.primary); r.setProperty("--secondary",t.secondary);
+  r.setProperty("--paper",t.paper); r.setProperty("--text",t.text);
+  r.setProperty("--text-dim",hexA(t.text,0.55)); r.setProperty("--border",hexA(t.primary,0.35)); r.setProperty("--glow",hexA(t.primary,0.5));
+  document.body.style.color=t.text;
+}
+function hexA(hex,a){
+  hex=hex.replace("#",""); if(hex.length===3) hex=hex.split("").map(c=>c+c).join("");
+  const n=parseInt(hex,16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+function checkDeathPenalty(){
+  const today=todayStr();
+  const gap=dateDiffDays(state.lastActiveDate,today);
+  if(gap===0) return;
+  if(gap===1){ state.streak=(state.streak||0)+1; }
+  if(gap>=2){
+    state.streak=0;
+    // find last completed room (highest id), reset it
+    if(state.completedRooms.length>0){
+      const last=Math.max(...state.completedRooms);
+      state.completedRooms=state.completedRooms.filter(r=>r!==last);
+      if(!state.resetRooms.includes(last)) state.resetRooms.push(last);
+    }
+    state.todayCompleted=[];
+  }
+  if(gap>=1){ state.todayCompleted=[]; }
+  state.lastActiveDate=today;
+  state.currentEra=getEraIndex(state.completedRooms.length);
+  saveLocal(); debouncedSave();
+}
+function maybeTransitionEra(){
+  const newEra=getEraIndex(state.completedRooms.length);
+  if(newEra!==state.currentEra){
+    const old=state.currentEra; state.currentEra=newEra;
+    inkTransition(()=>{ applyEraTheme(newEra); renderMain(); });
+    return true;
+  }
+  return false;
+}
+
+// Quiz
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function parseNumeric(s){
+  s=(s||"").trim().replace(/π/g,"3.14159265").replace(/[，]/g,"");
+  if(s==="") return NaN;
+  if(s.includes("/")){ const p=s.split("/"); const n=parseFloat(p[0]),d=parseFloat(p[1]); if(d!==0) return n/d; }
+  return parseFloat(s);
+}
+function startQuiz(roomId){
+  const room=ROOMS[roomId];
+  const n=room.boss?5:3, need=room.boss?4:2;
+  const pool=shuffle(room.questions).slice(0,Math.min(n,room.questions.length));
+  // entry philosophers (3 from current era)
+  const phils=pickPhilosophers(roomId,3,null);
+  ui.quiz={roomId,room,questions:pool,need,idx:0,correct:0,answers:[],selected:null,submitted:false,phils,finished:false,passed:false,completionPhil:null};
+  ui.modal="quiz";
+  renderMain();
+}
+function pickPhilosophers(roomId,count,exclude){
+  const era=ERA_THEMES[state.currentEra];
+  let chars=era.characters.slice();
+  if(exclude) chars=chars.filter(c=>!exclude.includes(c));
+  // use charCycle to avoid repeats
+  const key="e"+state.currentEra;
+  let used=state.charCycle[key]||[];
+  let avail=chars.filter(c=>!used.includes(c));
+  if(avail.length<count){ used=[]; avail=chars.slice(); }
+  const picked=shuffle(avail).slice(0,count);
+  state.charCycle[key]=used.concat(picked);
+  saveLocal();
+  return picked;
+}
+function submitQuizAnswer(){
+  const q=ui.quiz, cur=q.questions[q.idx];
+  let isCorrect=false, userText="";
+  if(cur.type==="choice"){
+    if(q.selected===null) return;
+    isCorrect=(q.selected===cur.ans); userText=cur.opts[q.selected];
+  } else {
+    const v=parseNumeric(q.selected); userText=q.selected;
+    if(!isNaN(v) && Math.abs(v-cur.ans)<=(cur.tol||0.01)) isCorrect=true;
+  }
+  q.submitted=true; q.lastCorrect=isCorrect; q.userText=userText;
+  if(isCorrect) q.correct++;
+  renderMain();
+}
+function nextQuizQuestion(){
+  const q=ui.quiz;
+  q.idx++; q.selected=null; q.submitted=false;
+  if(q.idx>=q.questions.length){ finishQuiz(); }
+  renderMain();
+}
+function finishQuiz(){
+  const q=ui.quiz;
+  q.finished=true;
+  q.passed=(q.correct>=q.need);
+  const room=q.room;
+  if(q.passed){
+    if(!state.completedRooms.includes(room.id)) state.completedRooms.push(room.id);
+    state.completedRooms.sort((a,b)=>a-b);
+    state.resetRooms=state.resetRooms.filter(r=>r!==room.id);
+    state.xp+=(room.boss?30:10);
+    if(!state.todayCompleted.includes(room.id)) state.todayCompleted.push(room.id);
+    q.completionPhil=pickPhilosophers(room.id,1,q.phils)[0];
+  } else if(room.boss){
+    // boss fail: clear progress, room back to locked
+    state.completedRooms=state.completedRooms.filter(r=>r!==room.id);
+    state.resetRooms=state.resetRooms.filter(r=>r!==room.id);
+    state.todayCompleted=state.todayCompleted.filter(r=>r!==room.id);
+  }
+  saveLocal(); debouncedSave();
+}
+function closeQuiz(){
+  const q=ui.quiz; ui.quiz=null; ui.modal=null;
+  if(q&&q.passed){
+    if(!maybeTransitionEra()){ renderMain(); }
+  } else { renderMain(); }
+}
+
+/* ============================================================
+   5. RENDERING
+   ============================================================ */
+const app=()=>document.getElementById("app");
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+function render(){
+  if(ui.view==="onboarding") renderOnboarding();
+  else renderMain();
+}
+function renderOnboarding(){
+  app().innerHTML=`
+  <div class="onboard">
+    <h1 class="en">木星数学史诗</h1>
+    <div class="sub">JUPITER MATH RPG · 数学学习追踪系统</div>
+    <div class="note">穿越八个思想时代，攻克微积分、线性代数与概率三大陆。<br>
+    存档通过 <b>GitHub Gist</b> 私密同步——你的 Token 仅保存在本地浏览器，绝不上传任何第三方服务器。<br>
+    输入一个具有 <b>gist</b> 权限的 Personal Access Token 即可跨设备同步进度。</div>
+    <input id="tokenInput" type="password" placeholder="GitHub Personal Access Token (gist scope)" />
+    <div id="obError" style="color:#e06050;min-height:20px;margin-bottom:8px;font-size:0.9rem;"></div>
+    <button class="btn" id="startBtn">开始冒险 · Begin</button>
+    <button class="btn btn-ghost" id="skipBtn">离线游玩（仅本地存档）</button>
+  </div>`;
+  document.getElementById("startBtn").onclick=async ()=>{
+    const token=document.getElementById("tokenInput").value.trim();
+    const err=document.getElementById("obError");
+    if(!token){ err.textContent="请输入 Token，或选择离线游玩。"; return; }
+    const btn=document.getElementById("startBtn"); btn.disabled=true; btn.textContent="验证中...";
+    const ok=await validateToken(token);
+    if(!ok){ err.textContent="Token 无效或网络错误，请检查后重试。"; btn.disabled=false; btn.textContent="开始冒险 · Begin"; return; }
+    localStorage.setItem(LS.token,token); ui.token=token; ui.offline=false;
+    btn.textContent="加载存档...";
+    let gistId=localStorage.getItem(LS.gistId);
+    if(!gistId){ gistId=await findOrCreateGist(token); if(gistId) localStorage.setItem(LS.gistId,gistId); }
+    ui.gistId=gistId;
+    let remote=gistId?await loadGist(token,gistId):null;
+    state=normalizeState(remote||defaultState());
+    ui.syncStatus="synced";
+    enterApp();
+  };
+  document.getElementById("skipBtn").onclick=()=>{
+    localStorage.setItem(LS.skip,"1"); ui.offline=true; ui.syncStatus="offline";
+    const local=localStorage.getItem(LS.localState);
+    state=normalizeState(local?JSON.parse(local):defaultState());
+    enterApp();
+  };
+}
+function enterApp(){
+  checkDeathPenalty();
+  state.currentEra=getEraIndex(state.completedRooms.length);
+  applyEraTheme(state.currentEra);
+  ui.view="main"; ui.continent=0;
+  saveLocal();
+  renderMain();
+}
+
+function renderMain(){
+  const era=ERA_THEMES[state.currentEra];
+  const done=state.completedRooms.length;
+  let html=renderHeader(era,done);
+  html+=`<div class="main-grid">
+    <div class="map-col">${renderMap()}</div>
+    <div class="side-col">${renderSideQuest()}</div>
+  </div>`;
+  html+=renderStatusBar();
+  app().innerHTML=html;
+  attachMainEvents();
+  if(ui.modal==="quiz") renderQuizModal();
+  else if(ui.modal==="eralog") renderEraLogModal();
+  else if(ui.modal&&ui.modal.type==="node") renderNodeModal(ui.modal.id);
+}
+function renderHeader(era,done){
+  const pct=Math.round(done/30*100);
+  return `<div class="header">
+    <div>
+      <div class="era-name">${esc(era.name)}</div>
+      <div class="era-en en">${esc(era.nameEn)}</div>
+    </div>
+    <div class="stat">经验 XP <b>${state.xp}</b></div>
+    <div class="stat">🔥 连击 <b>${state.streak}</b></div>
+    <div class="stat">进度 <b>${done}/30</b></div>
+    <button class="btn" style="padding:8px 18px;font-size:0.9rem" id="eraLogBtn">思想志</button>
+    <div class="spacer"></div>
+    <div class="sync-ind ${ui.syncStatus}">${syncLabel(ui.syncStatus)}</div>
+  </div>
+  <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>`;
+}
+function renderMap(){
+  const conts=["微积分大陆","线代帝国","概率神州"];
+  let tabs=`<div class="continent-tabs">`;
+  conts.forEach((c,i)=>{ tabs+=`<button class="${i===ui.continent?'active':''}" data-cont="${i}">${esc(c)}</button>`; });
+  tabs+=`</div>`;
+  const rooms=ROOMS.filter(r=>r.continent===ui.continent);
+  let list=`<div class="room-list">`;
+  rooms.forEach(r=>{
+    const st=getRoomStatus(r.id);
+    let badge="";
+    if(st==="completed") badge=`<span class="rbadge">✓ 已通关</span>`;
+    else if(st==="reset") badge=`<span class="rbadge">⚠ 需重修</span>`;
+    else if(st==="available") badge=`<span class="rbadge" style="color:var(--primary);border:1px solid var(--primary)">▶ 可进入</span>`;
+    else badge=`<span class="rbadge" style="color:var(--text-dim)">🔒 未解锁</span>`;
+    const icon=r.boss?"⚔":"◈";
+    list+=`<div class="room-card ${st} ${r.boss?'boss':''}" data-room="${r.id}">
+      <span class="icon">${icon}</span>
+      <div>
+        <div class="rname">${esc(r.name)}</div>
+        <div class="ren en">${esc(r.nameEn)}</div>
+        <div class="rsec">${esc(r.section)}${r.boss?' · BOSS':''}</div>
+      </div>
+      ${badge}
+    </div>`;
+  });
+  list+=`</div>`;
+  return tabs+list;
+}
+function renderSideQuest(){
+  const unlocked=state.todayCompleted.length>=1;
+  let inner;
+  if(!unlocked){
+    inner=`<div class="side-locked">⭐ 支线星图<br><br>今日完成至少一个数学房间后<br>解锁支线学习节点</div>`;
+  } else {
+    inner=`<div class="node-grid">`;
+    SIDE_NODES.forEach(n=>{
+      const visits=(state.visitedNodes[n.id]||0);
+      const cls=`node ${n.required?'required':''} ${visits>0?'visited':''}`;
+      inner+=`<div class="${cls}" data-node="${n.id}">
+        <span class="ncat cat-${n.category}"></span>
+        <div class="nname">${esc(n.name)}</div>
+        <div class="nvisits">${visits>0?('访 '+visits+' 次'):'未访问'}</div>
+      </div>`;
+    });
+    inner+=`</div>`;
+    inner+=`<div class="cat-legend">
+      <span><i class="cat-cs"></i>计算机</span><span><i class="cat-sci"></i>科学</span>
+      <span><i class="cat-hum"></i>人文</span><span><i class="cat-lang"></i>语言</span>
+      <span><i class="cat-soc"></i>社科</span><span><i class="cat-art"></i>艺术</span>
+    </div>`;
+  }
+  return `<div class="side-panel">
+    <h3>支线星图</h3><div class="side-en en">Side Quest Constellation · 金边为必修</div>
+    ${inner}
+    <div class="utility-row">
+      <button class="btn btn-ghost" id="exportBtn">导出存档</button>
+      <button class="btn btn-ghost" id="logoutBtn">退出/切换</button>
+    </div>
+  </div>`;
+}
+function renderStatusBar(){
+  const done=state.completedRooms.length;
+  const eraIdx=state.currentEra;
+  // rooms to next era
+  const thresholds=[4,8,12,16,20,23,26,30];
+  let nextThresh=thresholds.find(t=>t>done);
+  const toNext=nextThresh?nextThresh-done:0;
+  return `<div class="status-bar">
+    <div>今日完成：<b>${state.todayCompleted.length}</b> 个房间</div>
+    <div>当前连击：<b>${state.streak}</b> 天</div>
+    <div>距下一时代：<b>${eraIdx>=7?'已达终代':toNext+' 个房间'}</b></div>
+    <div>支线访问总数：<b>${Object.values(state.visitedNodes).reduce((a,b)=>a+b,0)}</b></div>
+  </div>`;
+}
+function renderQuotePanel(phils,isCompletion){
+  let html=`<div class="quote-panel">`;
+  phils.forEach(name=>{
+    const c=CHARACTERS[name];
+    const pq=PHILOSOPHER_QUOTES[name];
+    let arr=isCompletion?pq.completion:pq.entry;
+    const quote=arr[Math.floor(Math.random()*arr.length)];
+    html+=`<div class="quote-card">
+      <span class="qname">${esc(name)}</span><span class="qera">${esc(c?c.era:'')} · ${esc(c?c.nameEn:'')}</span>
+      <div class="qphil">"${esc(quote.phil)}"</div>
+    </div>`;
+  });
+  html+=`</div>`;
+  return html;
+}
+function renderQuizModal(){
+  const q=ui.quiz;
+  let body;
+  if(q.finished){
+    const cls=q.passed?"":"fail";
+    let philPanel = q.passed&&q.completionPhil ? renderQuotePanel([q.completionPhil],true) : "";
+    let msg;
+    if(q.passed){ msg=`通关成功！<br>答对 ${q.correct}/${q.questions.length} 题 · +${q.room.boss?30:10} XP`; }
+    else if(q.room.boss){ msg=`BOSS 战失败！<br>答对 ${q.correct}/${q.questions.length}（需 ${q.need}）<br><span style="font-size:0.9rem;color:var(--text-dim)">该房间已重置为未解锁，整顿后再战。</span>`; }
+    else { msg=`闯关失败<br>答对 ${q.correct}/${q.questions.length}（需 ${q.need}）<br><span style="font-size:0.9rem;color:var(--text-dim)">再接再厉，重新挑战。</span>`; }
+    body=`<div class="quiz-result ${cls}">
+      <div class="big en">${q.passed?'VICTORY':'DEFEAT'}</div>
+      <div style="line-height:1.8;margin-bottom:16px">${msg}</div>
+    </div>${philPanel}
+    <div style="text-align:center"><button class="btn" id="quizCloseBtn">${q.passed?'凯旋而归':'返回地图'}</button></div>`;
+  } else {
+    const cur=q.questions[q.idx];
+    let entryPanel = q.idx===0 ? renderQuotePanel(q.phils,false) : "";
+    let ansArea;
+    if(cur.type==="choice"){
+      ansArea=cur.opts.map((o,i)=>{
+        let extra="";
+        if(q.submitted){
+          if(i===cur.ans) extra="correct";
+          else if(i===q.selected) extra="wrong";
+        } else if(i===q.selected) extra="selected";
+        return `<button class="opt-btn ${extra}" data-opt="${i}" ${q.submitted?'disabled':''}>${esc(o)}</button>`;
+      }).join("");
+    } else {
+      ansArea=`<input class="num-input" id="numInput" placeholder="输入数值（可用分数如 3/4）" value="${q.selected?esc(q.selected):''}" ${q.submitted?'disabled':''} />`;
+    }
+    let feedback="";
+    if(q.submitted){
+      const ok=q.lastCorrect;
+      let head=ok?"✓ 正确":"✗ 错误";
+      let ansShow=cur.type==="choice"?cur.opts[cur.ans]:cur.ans;
+      if(!ok) head+=` — 正确答案：${esc(ansShow)}`;
+      feedback=`<div class="feedback ${ok?'ok':'no'}">
+        <div class="fhead">${head}</div>
+        <div class="fexp">${esc(cur.exp)}</div>
+      </div>`;
+    }
+    let actionBtn;
+    if(q.submitted){
+      const isLast=(q.idx===q.questions.length-1);
+      actionBtn=`<button class="btn" id="nextQBtn" style="margin-top:14px;width:100%">${isLast?'查看结果':'下一题 →'}</button>`;
+    } else {
+      actionBtn=`<button class="btn" id="submitQBtn" style="margin-top:6px;width:100%">提交答案</button>`;
+    }
+    body=`${entryPanel}
+      <div class="quiz-progress">第 ${q.idx+1}/${q.questions.length} 题 · 需答对 ${q.need} 题通关 · 当前答对 ${q.correct}</div>
+      <div class="quiz-q">${esc(cur.q)}</div>
+      ${ansArea}
+      ${feedback}
+      ${actionBtn}`;
+  }
+  showModal(`<div class="modal">
+    <div class="modal-head">
+      <div><h2>${esc(q.room.name)}</h2><div class="mh-en en">${esc(q.room.nameEn)}${q.room.boss?' · BOSS':''}</div></div>
+      <button class="close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body">${body}</div>
+  </div>`);
+  // events
+  document.getElementById("modalClose").onclick=()=>{ if(q.finished) closeQuiz(); else { ui.quiz=null; ui.modal=null; renderMain(); } };
+  const cb=document.getElementById("quizCloseBtn"); if(cb) cb.onclick=closeQuiz;
+  document.querySelectorAll(".opt-btn[data-opt]").forEach(b=>{ b.onclick=()=>{ if(ui.quiz.submitted) return; ui.quiz.selected=parseInt(b.dataset.opt); renderMain(); }; });
+  const ni=document.getElementById("numInput"); if(ni){ ni.oninput=e=>{ ui.quiz.selected=e.target.value; }; ni.onkeydown=e=>{ if(e.key==="Enter"){ submitQuizAnswer(); } }; ni.focus(); }
+  const sb=document.getElementById("submitQBtn"); if(sb) sb.onclick=submitQuizAnswer;
+  const nb=document.getElementById("nextQBtn"); if(nb) nb.onclick=nextQuizQuestion;
+}
+function renderEraLogModal(){
+  let list=`<div class="era-log-list">`;
+  ERA_THEMES.forEach((era,i)=>{
+    const cur=i===state.currentEra;
+    let phils=era.characters.map(name=>{
+      const c=CHARACTERS[name];
+      return `<div class="phil-item"><b>${esc(name)}</b><span class="pe">${esc(c?c.nameEn:'')}</span><br><span style="color:var(--text-dim);font-size:0.84rem">${esc(c?c.desc:'')}</span></div>`;
+    }).join("");
+    list+=`<div class="era-entry ${cur?'current':''}">
+      <div class="ee-head">
+        <span class="swatch" style="background:${era.primary}"></span>
+        <span class="ee-name">${esc(era.name)}${cur?' （当前）':''}</span>
+        <span class="ee-en en">${esc(era.nameEn)}</span>
+      </div>
+      <div class="phil-list">${phils}</div>
+    </div>`;
+  });
+  list+=`</div>`;
+  showModal(`<div class="modal">
+    <div class="modal-head"><div><h2>思想志</h2><div class="mh-en en">Chronicle of Thinkers · 八时代群贤</div></div>
+    <button class="close" id="modalClose">✕</button></div>
+    <div class="modal-body">${list}</div>
+  </div>`);
+  document.getElementById("modalClose").onclick=()=>{ ui.modal=null; renderMain(); };
+}
+function renderNodeModal(nodeId){
+  const node=SIDE_NODES.find(n=>n.id===nodeId);
+  const visits=state.visitedNodes[nodeId]||0;
+  const note=state.nodeNotes[nodeId]||"";
+  showModal(`<div class="modal node-modal">
+    <div class="modal-head"><div><h2>${esc(node.name)}</h2><div class="mh-en en">${esc(node.nameEn)}${node.required?' · 必修':''}</div></div>
+    <button class="close" id="modalClose">✕</button></div>
+    <div class="modal-body">
+      <p style="margin-bottom:12px;color:var(--text-dim)">已访问 <b style="color:var(--primary)">${visits}</b> 次。记录今日所学：</p>
+      <textarea id="nodeNote" placeholder="写下这个节点的学习笔记...">${esc(note)}</textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="nodeCancel">取消</button>
+      <button class="btn" id="nodeVisit">✓ 记一次访问</button>
+    </div>
+  </div>`);
+  document.getElementById("modalClose").onclick=()=>{ ui.modal=null; renderMain(); };
+  document.getElementById("nodeCancel").onclick=()=>{ ui.modal=null; renderMain(); };
+  document.getElementById("nodeVisit").onclick=()=>{
+    state.nodeNotes[nodeId]=document.getElementById("nodeNote").value;
+    state.visitedNodes[nodeId]=(state.visitedNodes[nodeId]||0)+1;
+    saveLocal(); debouncedSave();
+    ui.modal=null; renderMain(); toast("已记录访问 ✓");
+  };
+}
+
+function showModal(innerHTML){
+  let overlay=document.getElementById("modalOverlay");
+  if(!overlay){ overlay=document.createElement("div"); overlay.id="modalOverlay"; overlay.className="modal-overlay"; document.body.appendChild(overlay); }
+  overlay.innerHTML=innerHTML; overlay.style.display="flex";
+  overlay.onclick=e=>{ if(e.target===overlay){ /* keep quizzes open; only close non-quiz on backdrop */ if(ui.modal!=="quiz"){ ui.modal=null; renderMain(); } } };
+}
+function hideModal(){ const o=document.getElementById("modalOverlay"); if(o){ o.style.display="none"; o.innerHTML=""; } }
+
+function attachMainEvents(){
+  if(ui.modal===null) hideModal();
+  const elb=document.getElementById("eraLogBtn"); if(elb) elb.onclick=()=>{ ui.modal="eralog"; renderMain(); };
+  document.querySelectorAll(".continent-tabs button").forEach(b=>{ b.onclick=()=>{ ui.continent=parseInt(b.dataset.cont); renderMain(); }; });
+  document.querySelectorAll(".room-card").forEach(card=>{
+    card.onclick=()=>{ const id=parseInt(card.dataset.room); const st=getRoomStatus(id);
+      if(st==="available"||st==="reset") startQuiz(id);
+      else if(st==="completed") toast("此房间已通关，可继续挑战后续房间");
+      else toast("尚未解锁，请先完成前置房间");
+    };
+  });
+  document.querySelectorAll(".node[data-node]").forEach(n=>{ n.onclick=()=>{ ui.modal={type:"node",id:parseInt(n.dataset.node)}; renderMain(); }; });
+  const eb=document.getElementById("exportBtn"); if(eb) eb.onclick=exportSave;
+  const lo=document.getElementById("logoutBtn"); if(lo) lo.onclick=logout;
+}
+function exportSave(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob); const a=document.createElement("a");
+  a.href=url; a.download="jupiter-math-rpg-save.json"; a.click(); URL.revokeObjectURL(url);
+  toast("存档已导出");
+}
+function logout(){
+  if(!confirm("退出并切换账户？本地 Token 将被清除（云端存档保留）。")) return;
+  localStorage.removeItem(LS.token); localStorage.removeItem(LS.gistId); localStorage.removeItem(LS.skip);
+  ui.token=null; ui.gistId=null; ui.offline=false; ui.view="onboarding"; ui.modal=null;
+  render();
+}
+function toast(msg){
+  const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t);
+  setTimeout(()=>{ t.style.transition="opacity 0.4s"; t.style.opacity="0"; setTimeout(()=>t.remove(),400); },1800);
+}
+
+/* Ink wash transition */
+function inkTransition(midCallback){
+  const cv=document.getElementById("ink-canvas");
+  const ctx=cv.getContext("2d");
+  cv.width=window.innerWidth; cv.height=window.innerHeight; cv.style.display="block";
+  const cx=cv.width/2, cy=cv.height/2;
+  const maxR=Math.hypot(cx,cy);
+  let start=null; const dur=1000;
+  function expand(ts){
+    if(!start) start=ts; const p=Math.min((ts-start)/dur,1);
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.fillStyle="#000"; ctx.globalAlpha=1;
+    ctx.beginPath(); ctx.arc(cx,cy,maxR*easeInOut(p),0,Math.PI*2); ctx.fill();
+    if(p<1) requestAnimationFrame(expand);
+    else { midCallback&&midCallback(); fadeOut(); }
+  }
+  function fadeOut(){
+    let s2=null;
+    function fade(ts){ if(!s2) s2=ts; const p=Math.min((ts-s2)/1000,1);
+      ctx.clearRect(0,0,cv.width,cv.height); ctx.fillStyle="#000"; ctx.globalAlpha=1-p;
+      ctx.beginPath(); ctx.arc(cx,cy,maxR,0,Math.PI*2); ctx.fill();
+      if(p<1) requestAnimationFrame(fade); else { cv.style.display="none"; ctx.globalAlpha=1; }
+    }
+    requestAnimationFrame(fade);
+  }
+  requestAnimationFrame(expand);
+}
+function easeInOut(t){ return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2; }
+
+/* ============================================================
+   7. INIT
+   ============================================================ */
+async function init(){
+  const token=localStorage.getItem(LS.token);
+  const skip=localStorage.getItem(LS.skip);
+  if(token){
+    ui.token=token; ui.offline=false; ui.syncStatus="syncing";
+    let gistId=localStorage.getItem(LS.gistId);
+    if(!gistId){ gistId=await findOrCreateGist(token); if(gistId) localStorage.setItem(LS.gistId,gistId); }
+    ui.gistId=gistId;
+    let remote=gistId?await loadGist(token,gistId):null;
+    if(remote){ state=normalizeState(remote); ui.syncStatus="synced"; }
+    else { const local=localStorage.getItem(LS.localState); state=normalizeState(local?JSON.parse(local):defaultState()); ui.syncStatus="error"; }
+    enterApp();
+  } else if(skip){
+    ui.offline=true; ui.syncStatus="offline";
+    const local=localStorage.getItem(LS.localState);
+    state=normalizeState(local?JSON.parse(local):defaultState());
+    enterApp();
+  } else {
+    ui.view="onboarding"; render();
+  }
+}
+window.addEventListener("resize",()=>{ /* responsive handled by CSS; canvas resized on transition */ });
+init();
+</script>
+</body>
+</html>
